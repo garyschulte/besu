@@ -153,19 +153,22 @@ public class SnapWorldDownloadState extends WorldDownloadState<SnapDataRequest> 
     // TODO retry when mark as stalled
   }
 
-  @Override
-  public synchronized boolean checkCompletion(final BlockHeader header) {
-
-    // Check if all snapsync tasks are completed
-    if (!internalFuture.isDone()
+  public boolean allTasksComplete() {
+    return !internalFuture.isDone()
         && pendingAccountRequests.allTasksCompleted()
         && pendingCodeRequests.allTasksCompleted()
         && pendingStorageRequests.allTasksCompleted()
         && pendingLargeStorageRequests.allTasksCompleted()
         && pendingTrieNodeRequests.allTasksCompleted()
         && pendingAccountFlatDatabaseHealingRequests.allTasksCompleted()
-        && pendingStorageFlatDatabaseHealingRequests.allTasksCompleted()) {
+        && pendingStorageFlatDatabaseHealingRequests.allTasksCompleted();
+  }
 
+  @Override
+  public synchronized boolean checkCompletion(final BlockHeader header) {
+
+    // Check if all snapsync tasks are completed
+    if (allTasksComplete()) {
       // if all snapsync tasks are completed and the healing process was not running
       if (!snapSyncState.isHealTrieInProgress()) {
         // Register blockchain observer if not already registered
