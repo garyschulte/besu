@@ -41,12 +41,13 @@ public class GenesisWorldStateProvider {
   /**
    * Creates a Genesis world state based on the provided data storage format.
    *
-   * @param dataStorageFormat the data storage format to use
+   * @param dataStorageConfiguration the data storage configuration to use
    * @return a mutable world state for the Genesis block
    */
   public static MutableWorldState createGenesisWorldState(
-      final DataStorageFormat dataStorageFormat) {
-    if (Objects.requireNonNull(dataStorageFormat) == DataStorageFormat.BONSAI) {
+      final DataStorageConfiguration dataStorageConfiguration) {
+    if (Objects.requireNonNull(dataStorageConfiguration).getDataStorageFormat()
+        == DataStorageFormat.BONSAI) {
       return createGenesisBonsaiWorldState();
     } else {
       return createGenesisForestWorldState();
@@ -68,7 +69,7 @@ public class GenesisWorldStateProvider {
                 new InMemoryKeyValueStorage(),
                 new NoOpMetricsSystem()),
             new NoOpMetricsSystem(),
-            DataStorageConfiguration.DEFAULT_CONFIG);
+            DataStorageConfiguration.DEFAULT_BONSAI_CONFIG);
     return new BonsaiWorldState(
         bonsaiWorldStateKeyValueStorage,
         cachedMerkleTrieLoader,

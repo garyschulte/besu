@@ -14,19 +14,37 @@
  */
 package org.hyperledger.besu.services;
 
+import org.hyperledger.besu.datatypes.Wei;
+import org.hyperledger.besu.ethereum.core.MiningParameters;
+import org.hyperledger.besu.ethereum.worldstate.DataStorageConfiguration;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 
 import java.nio.file.Path;
 
 /** A concrete implementation of BesuConfiguration which is used in Besu plugin framework. */
 public class BesuConfigurationImpl implements BesuConfiguration {
+  private Path storagePath;
+  private Path dataPath;
+  private DataStorageConfiguration dataStorageConfiguration;
+  private MiningParameters miningParameters;
 
-  private final Path storagePath;
-  private final Path dataPath;
-
-  public BesuConfigurationImpl(final Path dataPath, final Path storagePath) {
+  /**
+   * Post creation initialization
+   *
+   * @param dataPath The Path representing data folder
+   * @param storagePath The path representing storage folder
+   * @param dataStorageConfiguration The data storage configuration
+   * @param miningParameters The mining parameters
+   */
+  public void init(
+      final Path dataPath,
+      final Path storagePath,
+      final DataStorageConfiguration dataStorageConfiguration,
+      final MiningParameters miningParameters) {
     this.dataPath = dataPath;
     this.storagePath = storagePath;
+    this.dataStorageConfiguration = dataStorageConfiguration;
+    this.miningParameters = miningParameters;
   }
 
   @Override
@@ -37,5 +55,15 @@ public class BesuConfigurationImpl implements BesuConfiguration {
   @Override
   public Path getDataPath() {
     return dataPath;
+  }
+
+  @Override
+  public int getDatabaseVersion() {
+    return dataStorageConfiguration.getDataStorageFormat().getDatabaseVersion();
+  }
+
+  @Override
+  public Wei getMinGasPrice() {
+    return miningParameters.getMinTransactionGasPrice();
   }
 }

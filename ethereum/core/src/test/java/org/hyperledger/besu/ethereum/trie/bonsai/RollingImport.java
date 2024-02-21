@@ -59,7 +59,7 @@ public class RollingImport {
         new BonsaiWorldState(
             archive,
             new BonsaiWorldStateKeyValueStorage(
-                provider, new NoOpMetricsSystem(), DataStorageConfiguration.DEFAULT_CONFIG),
+                provider, new NoOpMetricsSystem(), DataStorageConfiguration.DEFAULT_BONSAI_CONFIG),
             EvmConfiguration.DEFAULT,
             new BonsaiWorldStateConfig());
     final SegmentedInMemoryKeyValueStorage worldStateStorage =

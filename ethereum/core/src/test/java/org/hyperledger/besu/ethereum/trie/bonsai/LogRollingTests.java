@@ -164,7 +164,7 @@ class LogRollingTests {
         new BonsaiWorldState(
             archive,
             new BonsaiWorldStateKeyValueStorage(
-                provider, new NoOpMetricsSystem(), DataStorageConfiguration.DEFAULT_CONFIG),
+                provider, new NoOpMetricsSystem(), DataStorageConfiguration.DEFAULT_BONSAI_CONFIG),
             EvmConfiguration.DEFAULT,
             new BonsaiWorldStateConfig());
     final WorldUpdater updater = worldState.updater();
@@ -179,7 +179,9 @@ class LogRollingTests {
         new BonsaiWorldState(
             secondArchive,
             new BonsaiWorldStateKeyValueStorage(
-                secondProvider, new NoOpMetricsSystem(), DataStorageConfiguration.DEFAULT_CONFIG),
+                secondProvider,
+                new NoOpMetricsSystem(),
+                DataStorageConfiguration.DEFAULT_BONSAI_CONFIG),
             EvmConfiguration.DEFAULT,
             new BonsaiWorldStateConfig());
     final BonsaiWorldStateUpdateAccumulator secondUpdater =
@@ -212,7 +214,7 @@ class LogRollingTests {
         new BonsaiWorldState(
             archive,
             new BonsaiWorldStateKeyValueStorage(
-                provider, new NoOpMetricsSystem(), DataStorageConfiguration.DEFAULT_CONFIG),
+                provider, new NoOpMetricsSystem(), DataStorageConfiguration.DEFAULT_BONSAI_CONFIG),
             EvmConfiguration.DEFAULT,
             new BonsaiWorldStateConfig());
 
@@ -235,7 +237,9 @@ class LogRollingTests {
         new BonsaiWorldState(
             secondArchive,
             new BonsaiWorldStateKeyValueStorage(
-                secondProvider, new NoOpMetricsSystem(), DataStorageConfiguration.DEFAULT_CONFIG),
+                secondProvider,
+                new NoOpMetricsSystem(),
+                DataStorageConfiguration.DEFAULT_BONSAI_CONFIG),
             EvmConfiguration.DEFAULT,
             new BonsaiWorldStateConfig());
     final BonsaiWorldStateUpdateAccumulator secondUpdater =
@@ -269,7 +273,7 @@ class LogRollingTests {
         new BonsaiWorldState(
             archive,
             new BonsaiWorldStateKeyValueStorage(
-                provider, new NoOpMetricsSystem(), DataStorageConfiguration.DEFAULT_CONFIG),
+                provider, new NoOpMetricsSystem(), DataStorageConfiguration.DEFAULT_BONSAI_CONFIG),
             EvmConfiguration.DEFAULT,
             new BonsaiWorldStateConfig());
 
@@ -299,7 +303,9 @@ class LogRollingTests {
         new BonsaiWorldState(
             secondArchive,
             new BonsaiWorldStateKeyValueStorage(
-                secondProvider, new NoOpMetricsSystem(), DataStorageConfiguration.DEFAULT_CONFIG),
+                secondProvider,
+                new NoOpMetricsSystem(),
+                DataStorageConfiguration.DEFAULT_BONSAI_CONFIG),
             EvmConfiguration.DEFAULT,
             new BonsaiWorldStateConfig());
 
