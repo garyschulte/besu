@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.ethereum.bonsai.worldview.BonsaiWorldStateConfig;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.trie.bonsai.BonsaiValue;
@@ -62,7 +63,8 @@ class BonsaiWorldStateTest {
         new BonsaiWorldState(
             InMemoryKeyValueStorageProvider.createBonsaiInMemoryWorldStateArchive(blockchain),
             bonsaiWorldStateKeyValueStorage,
-            EvmConfiguration.DEFAULT);
+            EvmConfiguration.DEFAULT,
+            new BonsaiWorldStateConfig());
   }
 
   @ParameterizedTest
