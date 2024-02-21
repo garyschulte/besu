@@ -17,10 +17,17 @@ package org.hyperledger.besu.services;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPool;
 import org.hyperledger.besu.plugin.services.transactionpool.TransactionPoolService;
 
+/**
+ * A concrete implementation of TransactionPoolService which is used in Besu plugin framework.
+ */
 public class TransactionPoolServiceImpl implements TransactionPoolService {
 
   private final TransactionPool transactionPool;
 
+  /**
+   * blah
+   * @param transactionPool duh
+   */
   public TransactionPoolServiceImpl(final TransactionPool transactionPool) {
     this.transactionPool = transactionPool;
   }

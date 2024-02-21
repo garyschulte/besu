@@ -37,6 +37,9 @@ import org.apache.tuweni.bytes.Bytes32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * A concrete implementation of SynchronizationService which is used in Besu plugin framework.
+ */
 public class SynchronizationServiceImpl implements SynchronizationService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SynchronizationServiceImpl.class);
@@ -47,6 +50,14 @@ public class SynchronizationServiceImpl implements SynchronizationService {
   private final SyncState syncState;
   private final Optional<BonsaiWorldStateProvider> worldStateArchive;
 
+  /**
+   * Constructor for SynchronizationServiceImpl.
+   *
+   * @param protocolContext the protocol context
+   * @param protocolSchedule the protocol schedule
+   * @param syncState the sync state
+   * @param worldStateArchive the world state archive
+   */
   public SynchronizationServiceImpl(
       final ProtocolContext protocolContext,
       final ProtocolSchedule protocolSchedule,

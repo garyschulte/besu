@@ -17,10 +17,17 @@ package org.hyperledger.besu.services;
 import org.hyperledger.besu.ethereum.p2p.network.P2PNetwork;
 import org.hyperledger.besu.plugin.services.p2p.P2PService;
 
+/**
+ * A concrete implementation of P2PService which is used in Besu plugin framework.
+ */
 public class P2PServiceImpl implements P2PService {
 
   private final P2PNetwork p2PNetwork;
 
+  /**
+   * duh
+   * @param p2PNetwork blah
+   */
   public P2PServiceImpl(final P2PNetwork p2PNetwork) {
     this.p2PNetwork = p2PNetwork;
   }

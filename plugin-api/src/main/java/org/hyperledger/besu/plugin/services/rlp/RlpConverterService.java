@@ -21,17 +21,50 @@ import org.hyperledger.besu.plugin.services.BesuService;
 
 import org.apache.tuweni.bytes.Bytes;
 
+/**
+ * A service for converting RLP to and from block headers, block bodies, and transaction receipts.
+ */
 public interface RlpConverterService extends BesuService {
 
+  /**
+   * Builds a block header from RLP.
+   * @param rlp bytes
+   * @return header header
+   */
   BlockHeader buildHeaderFromRlp(final Bytes rlp);
 
+  /**
+   * Builds a block body from RLP.
+   * @param rlp bytes
+   * @return body
+   */
   BlockBody buildBodyFromRlp(final Bytes rlp);
 
+  /**
+   * Builds a transaction receipt from RLP.
+   * @param rlp rlp vla
+   * @return receipt
+   */
   TransactionReceipt buildReceiptFromRlp(final Bytes rlp);
 
+  /**
+   * Builds RLP from a block header.
+   * @param blockHeader hed
+   * @return bytes
+   */
   Bytes buildRlpFromHeader(final BlockHeader blockHeader);
 
+  /**
+   * Builds RLP from a block body.
+   * @param blockBody bod
+   * @return ret
+   */
   Bytes buildRlpFromBody(final BlockBody blockBody);
 
+  /**
+   * Builds RLP from a transaction receipt.
+   * @param receipt rec
+   * @return bytes
+   */
   Bytes buildRlpFromReceipt(final TransactionReceipt receipt);
 }

@@ -109,6 +109,10 @@ public class ChainPruningOptions implements CLIOptions<ChainPrunerConfiguration>
     return chainDataPruningBlocksRetained;
   }
 
+  /**
+   * duh
+   * @return long
+   */
   public Long getChainDataPruningBlocksRetainedLimit() {
     return chainDataPruningBlocksRetainedLimit;
   }

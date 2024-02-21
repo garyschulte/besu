@@ -25,10 +25,17 @@ import org.hyperledger.besu.plugin.services.rlp.RlpConverterService;
 
 import org.apache.tuweni.bytes.Bytes;
 
+/**
+ * A concrete implementation of RlpConverterService which is used in Besu plugin framework.
+ */
 public class RlpConverterServiceImpl implements RlpConverterService {
 
   private final BlockHeaderFunctions blockHeaderFunctions;
 
+  /**
+   * Constructor for RlpConverterServiceImpl.
+   * @param protocolSchedule blah
+   */
   public RlpConverterServiceImpl(final ProtocolSchedule protocolSchedule) {
     this.blockHeaderFunctions = ScheduleBasedBlockHeaderFunctions.create(protocolSchedule);
   }

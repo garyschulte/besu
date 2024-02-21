@@ -16,9 +16,18 @@ package org.hyperledger.besu.plugin.services.p2p;
 
 import org.hyperledger.besu.plugin.services.BesuService;
 
+/**
+ * A service for managing the P2P network.
+ */
 public interface P2PService extends BesuService {
 
+  /**
+   * Enables the discovery of peers.
+   */
   void enableDiscovery();
 
+  /**
+   * Disables the discovery of peers.
+   */
   void disableDiscovery();
 }

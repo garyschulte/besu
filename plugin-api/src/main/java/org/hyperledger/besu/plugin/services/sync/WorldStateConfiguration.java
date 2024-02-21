@@ -14,7 +14,15 @@
  */
 package org.hyperledger.besu.plugin.services.sync;
 
+/**
+ * blah.
+ */
 public interface WorldStateConfiguration {
 
+  /**
+   * Returns whether the trie is disabled.
+   *
+   * @return true if the trie is disabled, false otherwise.
+   */
   boolean isTrieDisabled();
 }

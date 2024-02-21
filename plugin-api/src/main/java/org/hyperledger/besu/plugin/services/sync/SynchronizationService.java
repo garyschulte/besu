@@ -19,15 +19,46 @@ import org.hyperledger.besu.plugin.data.BlockBody;
 import org.hyperledger.besu.plugin.data.BlockHeader;
 import org.hyperledger.besu.plugin.services.BesuService;
 
+/**
+ * A service for managing the synchronization of the blockchain.
+ */
 public interface SynchronizationService extends BesuService {
 
+  /**
+   * Fires a new unverified forkchoice event.
+   *
+   * @param head hed
+   * @param safeBlock safe
+   * @param finalizedBlock  fin
+   */
   void fireNewUnverifiedForkchoiceEvent(Hash head, Hash safeBlock, Hash finalizedBlock);
 
+  /**
+   * Sets the head of the blockchain to the given block header and body.
+   *
+   * @param blockHeader head
+   * @param blockBody bod
+   * @return bool
+   */
   boolean setHead(final BlockHeader blockHeader, final BlockBody blockBody);
 
+  /**
+   * Sets the head of the blockchain to the given block header and body.
+   * @param blockHeader hed
+   * @param blockBody bod
+   * @return bool
+   */
   boolean setHeadUnsafe(BlockHeader blockHeader, BlockBody blockBody);
 
+  /**
+   * Returns whether the trie is disabled.
+   *
+   * @return true if the trie is disabled, false otherwise.
+   */
   boolean isInitialSyncPhaseDone();
 
+  /**
+   * Disables the world state trie.
+   */
   void disableWorldStateTrie();
 }

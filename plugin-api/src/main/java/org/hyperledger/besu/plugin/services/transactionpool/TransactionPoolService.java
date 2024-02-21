@@ -16,8 +16,17 @@ package org.hyperledger.besu.plugin.services.transactionpool;
 
 import org.hyperledger.besu.plugin.services.BesuService;
 
+/**
+ * A service for managing the transaction pool.
+ */
 public interface TransactionPoolService extends BesuService {
+  /**
+   * Disables the transaction pool.
+   */
   void disableTransactionPool();
 
+  /**
+   * Enables the transaction pool.
+   */
   void enableTransactionPool();
 }

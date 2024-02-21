@@ -231,6 +231,9 @@ public class BesuPluginContextImpl implements BesuContext, PluginVersionsProvide
     state = Lifecycle.BEFORE_MAIN_LOOP_FINISHED;
   }
 
+  /**
+   * duh
+   */
   public void afterExternalServicesMainLoop() {
     checkState(
         state == Lifecycle.BEFORE_MAIN_LOOP_FINISHED,
