@@ -38,8 +38,8 @@ import org.hyperledger.besu.ethereum.worldstate.WorldStateStorageCoordinator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NavigableMap;
 import java.util.Optional;
-import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -129,13 +129,20 @@ public class StorageRangeDataRequest extends SnapDataRequest {
   public void addResponse(
       final SnapWorldDownloadState downloadState,
       final WorldStateProofProvider worldStateProofProvider,
-      final TreeMap<Bytes32, Bytes> slots,
+      final NavigableMap<Bytes32, Bytes> slots,
       final ArrayDeque<Bytes> proofs) {
     if (!slots.isEmpty() || !proofs.isEmpty()) {
       if (!worldStateProofProvider.isValidRangeProof(
           startKeyHash, endKeyHash, storageRoot, proofs, slots)) {
         // If the proof is invalid, it means that the storage will be a mix of several blocks.
         // Therefore, it will be necessary to heal the account's storage subsequently
+        LOG.atDebug()
+            .setMessage("invalid storage range proof received for account hash {} range {} {}")
+            .addArgument(() -> accountHash)
+            .addArgument(() -> slots.isEmpty() ? "none" : slots.firstKey())
+            .addArgument(() -> slots.isEmpty() ? "none" : slots.lastKey())
+            .log();
+
         downloadState.addAccountToHealingList(CompactEncoding.bytesToPath(accountHash));
         // We will request the new storage root of the account because it is apparently no longer
         // valid with the new pivot block.
@@ -203,7 +210,7 @@ public class StorageRangeDataRequest extends SnapDataRequest {
     return storageRoot;
   }
 
-  public TreeMap<Bytes32, Bytes> getSlots() {
+  public NavigableMap<Bytes32, Bytes> getSlots() {
     return stackTrie.getElement(startKeyHash).keys();
   }
 

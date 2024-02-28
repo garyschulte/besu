@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -72,7 +73,9 @@ public class StackTrie {
   }
 
   public void addElement(
-      final Bytes32 taskIdentifier, final List<Bytes> proofs, final TreeMap<Bytes32, Bytes> keys) {
+      final Bytes32 taskIdentifier,
+      final List<Bytes> proofs,
+      final NavigableMap<Bytes32, Bytes> keys) {
     this.elementsCount.addAndGet(keys.size());
     this.elements.put(
         taskIdentifier, ImmutableTaskElement.builder().proofs(proofs).keys(keys).build());
@@ -116,35 +119,38 @@ public class StackTrie {
         proofsEntries.put(Hash.hash(proof), proof);
       }
 
-      final InnerNodeDiscoveryManager<Bytes> snapStoredNodeFactory =
-          new InnerNodeDiscoveryManager<>(
-              (location, hash) -> Optional.ofNullable(proofsEntries.get(hash)),
-              Function.identity(),
-              Function.identity(),
-              startKeyHash,
-              keys.lastKey(),
-              true);
+      if (keys.size() > 0) {
+        final InnerNodeDiscoveryManager<Bytes> snapStoredNodeFactory =
+            new InnerNodeDiscoveryManager<>(
+                (location, hash) -> Optional.ofNullable(proofsEntries.get(hash)),
+                Function.identity(),
+                Function.identity(),
+                startKeyHash,
+                keys.lastKey(),
+                true);
 
-      final MerkleTrie<Bytes, Bytes> trie =
-          new StoredMerklePatriciaTrie<>(
-              snapStoredNodeFactory, proofs.isEmpty() ? MerkleTrie.EMPTY_TRIE_NODE_HASH : rootHash);
+        final MerkleTrie<Bytes, Bytes> trie =
+            new StoredMerklePatriciaTrie<>(
+                snapStoredNodeFactory,
+                proofs.isEmpty() ? MerkleTrie.EMPTY_TRIE_NODE_HASH : rootHash);
 
-      for (Map.Entry<Bytes32, Bytes> entry : keys.entrySet()) {
-        trie.put(entry.getKey(), new SnapPutVisitor<>(snapStoredNodeFactory, entry.getValue()));
-      }
+        for (Map.Entry<Bytes32, Bytes> entry : keys.entrySet()) {
+          trie.put(entry.getKey(), new SnapPutVisitor<>(snapStoredNodeFactory, entry.getValue()));
+        }
 
-      keys.forEach(flatDatabaseUpdater::update);
+        keys.forEach(flatDatabaseUpdater::update);
 
-      trie.commit(
-          nodeUpdater,
-          (new CommitVisitor<>(nodeUpdater) {
-            @Override
-            public void maybeStoreNode(final Bytes location, final Node<Bytes> node) {
-              if (!node.isHealNeeded()) {
-                super.maybeStoreNode(location, node);
+        trie.commit(
+            nodeUpdater,
+            (new CommitVisitor<>(nodeUpdater) {
+              @Override
+              public void maybeStoreNode(final Bytes location, final Node<Bytes> node) {
+                if (!node.isHealNeeded()) {
+                  super.maybeStoreNode(location, node);
+                }
               }
-            }
-          }));
+            }));
+      }
     }
   }
 
@@ -180,7 +186,7 @@ public class StackTrie {
     }
 
     @Value.Default
-    public TreeMap<Bytes32, Bytes> keys() {
+    public NavigableMap<Bytes32, Bytes> keys() {
       return new TreeMap<>();
     }
   }
