@@ -30,12 +30,13 @@ import org.hyperledger.besu.ethereum.trie.MerkleTrieException;
 import org.hyperledger.besu.ethereum.trie.bonsai.cache.CachedMerkleTrieLoader;
 import org.hyperledger.besu.ethereum.trie.bonsai.cache.CachedWorldStorageManager;
 import org.hyperledger.besu.ethereum.trie.bonsai.storage.BonsaiWorldStateKeyValueStorage;
+import org.hyperledger.besu.ethereum.trie.bonsai.storage.flat.FullFlatDbStrategy;
 import org.hyperledger.besu.ethereum.trie.bonsai.trielog.TrieLogManager;
 import org.hyperledger.besu.ethereum.trie.bonsai.worldview.BonsaiWorldState;
 import org.hyperledger.besu.ethereum.trie.bonsai.worldview.BonsaiWorldStateUpdateAccumulator;
 import org.hyperledger.besu.ethereum.trie.patricia.StoredMerklePatriciaTrie;
+import org.hyperledger.besu.ethereum.worldstate.FlatWorldStateArchive;
 import org.hyperledger.besu.ethereum.worldstate.StateTrieAccountValue;
-import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.evm.internal.EvmConfiguration;
 import org.hyperledger.besu.evm.worldstate.WorldState;
 import org.hyperledger.besu.plugin.BesuContext;
@@ -54,7 +55,7 @@ import org.apache.tuweni.units.bigints.UInt256;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BonsaiWorldStateProvider implements WorldStateArchive {
+public class BonsaiWorldStateProvider implements FlatWorldStateArchive {
 
   private static final Logger LOG = LoggerFactory.getLogger(BonsaiWorldStateProvider.class);
 
@@ -130,7 +131,7 @@ public class BonsaiWorldStateProvider implements WorldStateArchive {
 
   @Override
   public boolean isWorldStateAvailable(final Hash rootHash, final Hash blockHash) {
-    return cachedWorldStorageManager.containWorldStateStorage(blockHash)
+    return cachedWorldStorageManager.contains(blockHash)
         || persistedState.blockHash().equals(blockHash)
         || worldStateStorage.isWorldStateAvailable(rootHash, blockHash);
   }
@@ -336,8 +337,9 @@ public class BonsaiWorldStateProvider implements WorldStateArchive {
     return trieLogManager;
   }
 
-  public CachedWorldStorageManager getCachedWorldStorageManager() {
-    return cachedWorldStorageManager;
+  @Override
+  public Optional<CachedWorldStorageManager> getCachedWorldStorageManager() {
+    return Optional.of(cachedWorldStorageManager);
   }
 
   @Override
@@ -346,6 +348,11 @@ public class BonsaiWorldStateProvider implements WorldStateArchive {
     this.cachedWorldStorageManager.reset();
     this.cachedWorldStorageManager.addCachedLayer(
         blockHeader, persistedState.getWorldStateRootHash(), persistedState);
+  }
+
+  @Override
+  public boolean isFullFlat() {
+    return worldStateStorage.getFlatDbStrategy() instanceof FullFlatDbStrategy;
   }
 
   @Override

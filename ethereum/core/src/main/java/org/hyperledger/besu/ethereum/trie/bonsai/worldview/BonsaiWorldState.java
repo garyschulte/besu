@@ -89,7 +89,7 @@ public class BonsaiWorldState
     this(
         worldStateStorage,
         archive.getCachedMerkleTrieLoader(),
-        archive.getCachedWorldStorageManager(),
+        archive.getCachedWorldStorageManager().orElseThrow(),
         archive.getTrieLogManager(),
         evmConfiguration);
   }

@@ -67,4 +67,10 @@ public interface WorldStateArchive extends Closeable {
       final Address accountAddress,
       final List<UInt256> accountStorageKeys,
       final Function<Optional<WorldStateProof>, ? extends Optional<U>> mapper);
+
+  default Optional<FlatWorldStateArchive> isFlatArchive() {
+    return Optional.of(this)
+        .filter(FlatWorldStateArchive.class::isInstance)
+        .map(FlatWorldStateArchive.class::cast);
+  }
 }
