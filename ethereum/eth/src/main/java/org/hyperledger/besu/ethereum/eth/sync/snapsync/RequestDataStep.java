@@ -36,9 +36,11 @@ import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.services.tasks.Task;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -129,7 +131,7 @@ public class RequestDataStep {
             (response, error) -> {
               if (response != null) {
                 downloadState.removeOutstandingTask(getStorageRangeTask);
-                final ArrayDeque<TreeMap<Bytes32, Bytes>> slots = new ArrayDeque<>();
+                final ArrayDeque<NavigableMap<Bytes32, Bytes>> slots = new ArrayDeque<>();
                 // Check if we have an empty range
 
                 /*
@@ -142,7 +144,7 @@ public class RequestDataStep {
                     (response.slots().isEmpty() || response.slots().get(0).isEmpty())
                         && !response.proofs().isEmpty();
                 if (isEmptyRange) { // empty range detected
-                  slots.add(new TreeMap<>());
+                  slots.add(Collections.emptyNavigableMap());
                 } else {
                   slots.addAll(response.slots());
                 }

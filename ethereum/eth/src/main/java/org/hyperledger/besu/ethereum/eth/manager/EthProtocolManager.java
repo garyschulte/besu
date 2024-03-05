@@ -419,6 +419,9 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
       final DisconnectReason reason,
       final boolean initiatedByPeer) {
     if (ethPeers.registerDisconnect(connection)) {
+      if (reason.equals(DisconnectReason.SUBPROTOCOL_TRIGGERED)) {
+        LOG.debug("Logging stack trace:", new Exception("Stack trace for debugging"));
+      }
       LOG.atDebug()
           .setMessage("Disconnect - {} - {} - {} - {} peers left")
           .addArgument(initiatedByPeer ? "Inbound" : "Outbound")
