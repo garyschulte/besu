@@ -1047,11 +1047,7 @@ public abstract class BesuControllerBuilder implements MiningParameterOverrides 
         .orElse(false)) {
       return Optional.of(
           new SnapProtocolManager(
-              worldStateStorageCoordinator,
-              peerValidators,
-              ethPeers,
-              snapMessages,
-              protocolContext));
+              worldStateStorageCoordinator, syncConfig, ethPeers, snapMessages, protocolContext));
     } else {
       return Optional.empty();
     }
