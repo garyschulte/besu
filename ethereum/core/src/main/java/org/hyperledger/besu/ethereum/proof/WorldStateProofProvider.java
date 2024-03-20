@@ -175,7 +175,7 @@ public class WorldStateProofProvider {
       } else {
         // TODO: possibly accept a node loader so we can verify this with already
         //  completed partial storage requests
-        LOG.info("failing proof due to incomplete range without proofs");
+        LOG.warn("failing proof due to incomplete range without proofs");
         return false;
       }
     }

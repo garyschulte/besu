@@ -16,11 +16,12 @@ package org.hyperledger.besu.ethereum.eth.sync.snapsync.request;
 
 import static org.hyperledger.besu.ethereum.eth.sync.snapsync.RequestType.STORAGE_RANGE;
 import static org.hyperledger.besu.ethereum.eth.sync.snapsync.StackTrie.FlatDatabaseUpdater.noop;
-import static org.hyperledger.besu.ethereum.worldstate.WorldStateStorageCoordinator.applyForStrategy;
 import static org.hyperledger.besu.ethereum.trie.RangeManager.MAX_RANGE;
 import static org.hyperledger.besu.ethereum.trie.RangeManager.MIN_RANGE;
 import static org.hyperledger.besu.ethereum.trie.RangeManager.findNewBeginElementInRange;
 import static org.hyperledger.besu.ethereum.trie.RangeManager.getRangeCount;
+import static org.hyperledger.besu.ethereum.trie.RangeManager.isInRange;
+import static org.hyperledger.besu.ethereum.worldstate.WorldStateStorageCoordinator.applyForStrategy;
 
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.eth.sync.snapsync.SnapSyncConfiguration;
@@ -65,6 +66,8 @@ public class StorageRangeDataRequest extends SnapDataRequest {
   private final StackTrie stackTrie;
   private Optional<Boolean> isProofValid;
 
+  private boolean isProofEmpty;
+
   protected StorageRangeDataRequest(
       final Hash rootHash,
       final Bytes32 accountHash,
@@ -96,14 +99,26 @@ public class StorageRangeDataRequest extends SnapDataRequest {
 
     // search incomplete nodes in the range
     final AtomicInteger nbNodesSaved = new AtomicInteger();
-    final NodeUpdater nodeUpdater =
-        (location, hash, value) -> {
-          applyForStrategy(
-              updater,
-              onBonsai -> onBonsai.putAccountStorageTrieNode(accountHash, location, hash, value),
-              onForest -> onForest.putAccountStorageTrieNode(hash, value));
-          nbNodesSaved.incrementAndGet();
-        };
+    final NodeUpdater nodeUpdater = new NodeUpdater() {
+      @Override
+      public void store(final Bytes location, final Bytes32 hash, final Bytes value) {
+        applyForStrategy(updater,
+            onBonsai -> onBonsai.putAccountStorageTrieNode(accountHash, location, hash, value),
+            onForest -> onForest.putAccountStorageTrieNode(hash, value));
+        nbNodesSaved.incrementAndGet();
+      }
+
+      @Override
+      public void store(final Bytes location, final Bytes32 hash, final Bytes value,
+          final boolean isHealNeeded, final boolean isDirty) {
+        if (!isProofEmpty) {
+          System.out.println(
+              "StorageRangeDataRequest " + accountHash + " " + location + " " + hash + " " + value + " " + startKeyHash + " " + endKeyHash + " " + isInRange(
+                  location, startKeyHash, endKeyHash) + " " + isHealNeeded + " " + isDirty);
+        }
+        store(location, hash, value);
+      }
+    };
 
     final AtomicReference<StackTrie.FlatDatabaseUpdater> flatDatabaseUpdater =
         new AtomicReference<>(noop());
@@ -131,6 +146,7 @@ public class StorageRangeDataRequest extends SnapDataRequest {
       final WorldStateProofProvider worldStateProofProvider,
       final NavigableMap<Bytes32, Bytes> slots,
       final ArrayDeque<Bytes> proofs) {
+    isProofEmpty = proofs.isEmpty();
     if (!slots.isEmpty() || !proofs.isEmpty()) {
       if (!worldStateProofProvider.isValidRangeProof(
           startKeyHash, endKeyHash, storageRoot, proofs, slots)) {
