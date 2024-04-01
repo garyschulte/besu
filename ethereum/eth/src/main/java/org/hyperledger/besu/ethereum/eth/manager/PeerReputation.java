@@ -28,16 +28,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nonnull;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class PeerReputation implements Comparable<PeerReputation> {
   static final long USELESS_RESPONSE_WINDOW_IN_MILLIS =
       TimeUnit.MILLISECONDS.convert(1, TimeUnit.MINUTES);
-  static final int DEFAULT_MAX_SCORE = 150;
+  static final int DEFAULT_MAX_SCORE = 200;
   static final int DEFAULT_INITIAL_SCORE = 100;
   private static final Logger LOG = LoggerFactory.getLogger(PeerReputation.class);
-  private static final int TIMEOUT_THRESHOLD = 3;
+  private static final int TIMEOUT_THRESHOLD = 5;
   private static final int USELESS_RESPONSE_THRESHOLD = 5;
 
   private final ConcurrentMap<Integer, AtomicInteger> timeoutCountByRequestType =
@@ -62,13 +63,20 @@ public class PeerReputation implements Comparable<PeerReputation> {
     this.score = initialScore;
   }
 
-  public Optional<DisconnectReason> recordRequestTimeout(final int requestCode) {
+  @VisibleForTesting
+  Optional<DisconnectReason> recordRequestTimeout(final int requestCode) {
+    return recordRequestTimeout(requestCode, null);
+  }
+
+  public Optional<DisconnectReason> recordRequestTimeout(
+      final int requestCode, final EthPeer peer) {
     final int newTimeoutCount = getOrCreateTimeoutCount(requestCode).incrementAndGet();
     if (newTimeoutCount >= TIMEOUT_THRESHOLD) {
-      LOG.debug(
-          "Disconnection triggered by {} repeated timeouts for requestCode {}",
+      LOG.info(
+          "Disconnection triggered by {} repeated timeouts for requestCode {}, peer {}",
           newTimeoutCount,
-          requestCode);
+          requestCode,
+          peer);
       score -= LARGE_ADJUSTMENT;
       return Optional.of(DisconnectReason.TIMEOUT);
     } else {

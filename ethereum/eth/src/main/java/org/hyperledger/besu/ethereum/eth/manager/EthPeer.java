@@ -209,13 +209,13 @@ public class EthPeer implements Comparable<EthPeer> {
     chainHeadState.removeEstimatedHeightListener(listenerId);
   }
 
-  public void recordRequestTimeout(final int requestCode) {
+  public void recordRequestTimeout(final int requestCode, final EthPeer peer) {
     LOG.atDebug()
         .setMessage("Timed out while waiting for response from peer {}...")
         .addArgument(this::getLoggableId)
         .log();
     LOG.trace("Timed out while waiting for response from peer {}", this);
-    reputation.recordRequestTimeout(requestCode).ifPresent(this::disconnect);
+    reputation.recordRequestTimeout(requestCode, peer).ifPresent(this::disconnect);
   }
 
   public void recordUselessResponse(final String requestType) {
