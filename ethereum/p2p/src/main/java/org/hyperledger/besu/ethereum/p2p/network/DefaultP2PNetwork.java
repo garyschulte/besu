@@ -358,7 +358,12 @@ public class DefaultP2PNetwork implements P2PNetwork {
         peers.add(peer);
       }
       if (!peers.isEmpty()) {
-        peers.stream().forEach(peerDiscoveryAgent::bond);
+        peers.stream()
+            .forEach(
+                peer -> {
+                  LOG.info("attempting to peer with {}", peer);
+                  peerDiscoveryAgent.bond(peer);
+                });
       }
     };
   }
