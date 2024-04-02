@@ -77,7 +77,7 @@ public class GetHeadersFromPeerByNumberTask extends AbstractGetHeadersFromPeerTa
   protected PendingPeerRequest sendRequest() {
     return sendRequestToPeer(
         peer -> {
-          LOG.atTrace()
+          LOG.atInfo()
               .setMessage("Requesting {} headers (blockNumber {}) from peer {}.")
               .addArgument(count)
               .addArgument(blockNumber)
