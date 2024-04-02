@@ -53,7 +53,7 @@ public class RequiredBlocksPeerValidator extends AbstractPeerBlockValidator {
   boolean validateBlockHeader(final EthPeer ethPeer, final BlockHeader header) {
     final boolean validBlock = hash.equals(header.getHash());
     if (!validBlock) {
-      LOG.debug(
+      LOG.error(
           "Peer {} is invalid because required block ({}) does not match required hash ({}).",
           ethPeer,
           blockNumber,
