@@ -78,7 +78,7 @@ abstract class AbstractPeerBlockValidator implements PeerValidator {
         .run()
         .handle(
             (res, err) -> {
-              LOG.info("result handler for peer {}:{}", peerInfo.getClientId(),
+              LOG.info("result {} err {} handler for peer {}:{}", res, err, peerInfo.getClientId(),
                   peerInfo.getNodeId().toEllipsisHexString());
               if (err != null) {
                 // Mark peer as invalid on error

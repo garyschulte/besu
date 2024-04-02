@@ -399,6 +399,9 @@ public class EthPeer implements Comparable<EthPeer> {
   private RequestManager.ResponseStream sendRequest(
       final RequestManager requestManager, final MessageData messageData) throws PeerNotConnected {
     lastRequestTimestamp = clock.millis();
+    LOG.info("sending request to peer {}:{} ",
+        this.getConnection().getPeerInfo().getClientId(),
+        this.getConnection().getPeerInfo().getNodeId().toEllipsisHexString());
     return requestManager.dispatchRequest(
         msgData -> connection.sendForProtocol(requestManager.getProtocolName(), msgData),
         messageData);

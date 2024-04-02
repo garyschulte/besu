@@ -65,6 +65,7 @@ public class RequestManager {
     outstandingRequests.incrementAndGet();
     final BigInteger requestId = BigInteger.valueOf(requestIdCounter.getAndIncrement());
     final ResponseStream stream = createStream(requestId);
+    LOG.info("request supports request id? {}", supportsRequestId);
     sender.send(supportsRequestId ? messageData.wrapMessageData(requestId) : messageData);
     return stream;
   }
