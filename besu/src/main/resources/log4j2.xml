@@ -51,6 +51,11 @@
         <Logger name="org.hyperledger.besu.ethereum.eth.transactions">
             <MarkerFilter marker="INVALID_TX_REMOVED" onMatch="DENY" onMismatch="NEUTRAL" />
         </Logger>
+        <!-- Add specific debug loggers -->
+        <Logger name="org.hyperledger.besu.ethereum.eth.peervalidation" level="TRACE"/>
+        <Logger name="org.hyperledger.besu.ethereum.eth.sync.fastsync.PivotSelectorFromSafeBlock" level="TRACE"/>
+        <Logger name="org.hyperledger.besu.ethereum.eth.sync.fastsync.SyncTargetManager" level="TRACE"/>
+        <Logger name="org.hyperledger.besu.ethereum.eth.sync.tasks.RetryingGetHeaderFromPeerByHashTask" level="TRACE"/>
         <Root level="${sys:root.log.level}">
             <AppenderRef ref="Router" />
         </Root>

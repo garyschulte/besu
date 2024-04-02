@@ -417,10 +417,11 @@ public abstract class PeerDiscoveryAgent {
   }
 
   public void bond(final Peer peer) {
-    controller.ifPresent(
+    controller.ifPresentOrElse(
         c -> {
           DiscoveryPeer.from(peer).ifPresent(c::handleBondingRequest);
-        });
+        },
+        () -> LOG.error("Peer Discovery Controller not present"));
   }
 
   @VisibleForTesting
