@@ -66,6 +66,9 @@ abstract class AbstractPeerBlockValidator implements PeerValidator {
   @Override
   public CompletableFuture<Boolean> validatePeer(
       final EthContext ethContext, final EthPeer ethPeer) {
+    var peerInfo = ethPeer.getConnection().getPeerInfo();
+    LOG.info("running {} for peer {}:{}", this.getClass().getSimpleName(),
+        peerInfo.getClientId(), peerInfo.getNodeId().toEllipsisHexString());
     final AbstractPeerTask<List<BlockHeader>> getHeaderTask =
         GetHeadersFromPeerByNumberTask.forSingleNumber(
                 protocolSchedule, ethContext, blockNumber, metricsSystem)
@@ -77,7 +80,7 @@ abstract class AbstractPeerBlockValidator implements PeerValidator {
             (res, err) -> {
               if (err != null) {
                 // Mark peer as invalid on error
-                LOG.debug(
+                LOG.error(
                     "Peer {} is invalid because required block ({}) is unavailable: {}",
                     ethPeer,
                     blockNumber,
@@ -88,13 +91,13 @@ abstract class AbstractPeerBlockValidator implements PeerValidator {
               if (headers.size() == 0) {
                 if (blockIsRequired()) {
                   // If no headers are returned, fail
-                  LOG.debug(
+                  LOG.error(
                       "Peer {} is invalid because required block ({}) is unavailable.",
                       ethPeer,
                       blockNumber);
                   return false;
                 } else {
-                  LOG.debug(
+                  LOG.info(
                       "Peer {} deemed valid because unavailable block ({}) is not required.",
                       ethPeer,
                       blockNumber);
@@ -102,6 +105,11 @@ abstract class AbstractPeerBlockValidator implements PeerValidator {
                 }
               }
               final BlockHeader header = headers.get(0);
+              LOG.info(
+                  "Peer {} checking for present block ({}).",
+                  ethPeer,
+                  blockNumber);
+
               return validateBlockHeader(ethPeer, header);
             });
   }
