@@ -181,7 +181,10 @@ public class EthPeer implements Comparable<EthPeer> {
   }
 
   public void markValidated(final PeerValidator validator) {
+    LOG.info("Marking validated peer {}", this);
+
     if (!validationStatus.containsKey(validator)) {
+      LOG.error("unexpected missing validator {}", validator.getClass().getSimpleName());
       throw new IllegalArgumentException("Attempt to update unknown validation status");
     }
     validationStatus.put(validator, true);

@@ -41,7 +41,7 @@ public class PeerValidatorRunner {
   public void checkPeer(final EthPeer ethPeer) {
     if (peerValidator.canBeValidated(ethPeer)) {
       var info = ethPeer.getConnection().getPeerInfo();
-      LOG.debug("Checking peer {} {}", info.getClientId(), info.getNodeId().toEllipsisHexString());
+      LOG.info("Checking peer {} {}", info.getClientId(), info.getNodeId().toEllipsisHexString());
       peerValidator
           .validatePeer(ethContext, ethPeer)
           .whenComplete(
@@ -59,7 +59,7 @@ public class PeerValidatorRunner {
   }
 
   protected void disconnectPeer(final EthPeer ethPeer) {
-    LOG.debug(
+    LOG.info(
         "Disconnecting from peer {} marked invalid by {}",
         ethPeer,
         peerValidator.getClass().getSimpleName());
