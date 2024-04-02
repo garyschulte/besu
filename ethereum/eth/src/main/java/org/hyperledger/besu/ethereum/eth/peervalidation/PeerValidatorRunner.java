@@ -50,6 +50,7 @@ public class PeerValidatorRunner {
                   // Disconnect invalid peer
                   disconnectPeer(ethPeer);
                 } else {
+                  LOG.info("Validated peer {} {}", info.getClientId(), info.getNodeId().toEllipsisHexString());
                   ethPeer.markValidated(peerValidator);
                 }
               });
