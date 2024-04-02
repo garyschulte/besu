@@ -66,7 +66,7 @@ abstract class AbstractPeerBlockValidator implements PeerValidator {
   @Override
   public CompletableFuture<Boolean> validatePeer(
       final EthContext ethContext, final EthPeer ethPeer) {
-    var peerInfo = ethPeer.getConnection().getPeerInfo();
+    final var peerInfo = ethPeer.getConnection().getPeerInfo();
     LOG.info("running {} for peer {}:{}", this.getClass().getSimpleName(),
         peerInfo.getClientId(), peerInfo.getNodeId().toEllipsisHexString());
     final AbstractPeerTask<List<BlockHeader>> getHeaderTask =
@@ -78,6 +78,8 @@ abstract class AbstractPeerBlockValidator implements PeerValidator {
         .run()
         .handle(
             (res, err) -> {
+              LOG.info("result handler for peer {}:{}", peerInfo.getClientId(),
+                  peerInfo.getNodeId().toEllipsisHexString());
               if (err != null) {
                 // Mark peer as invalid on error
                 LOG.error(
@@ -87,6 +89,11 @@ abstract class AbstractPeerBlockValidator implements PeerValidator {
                     err.toString());
                 return false;
               }
+
+              LOG.info("result {} for peer {}:{}",
+                  res.getResult(),
+                  peerInfo.getClientId(),
+                  peerInfo.getNodeId().toEllipsisHexString());
               final List<BlockHeader> headers = res.getResult();
               if (headers.size() == 0) {
                 if (blockIsRequired()) {
