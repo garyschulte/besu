@@ -127,7 +127,7 @@ public abstract class AbstractPeerConnection implements PeerConnection {
           .inc();
     }
 
-    LOG.atTrace()
+    LOG.atInfo()
         .addMarker(P2P_MESSAGE_MARKER)
         .setMessage("Writing {} to {} via protocol {}")
         .addArgument(message)

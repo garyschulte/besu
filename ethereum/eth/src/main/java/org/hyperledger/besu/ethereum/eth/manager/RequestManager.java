@@ -64,7 +64,8 @@ public class RequestManager {
       throws PeerNotConnected {
     outstandingRequests.incrementAndGet();
     final BigInteger requestId = BigInteger.valueOf(requestIdCounter.getAndIncrement());
-    LOG.info("request {} id {} supports request id? {}", messageData.getCode(), requestId, supportsRequestId);
+    LOG.info("{} request {} id {} supports request id? {}",
+        protocolName, messageData.getCode(), requestId, supportsRequestId);
     final ResponseStream stream = createStream(requestId);
     sender.send(supportsRequestId ? messageData.wrapMessageData(requestId) : messageData);
     return stream;
@@ -126,7 +127,7 @@ public class RequestManager {
 
   @FunctionalInterface
   public interface RequestSender {
-    void send(final MessageData messageData) throws PeerNotConnected;
+    void  send(final MessageData messageData) throws PeerNotConnected;
   }
 
   @FunctionalInterface
