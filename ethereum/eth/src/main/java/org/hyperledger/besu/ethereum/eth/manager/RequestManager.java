@@ -64,8 +64,8 @@ public class RequestManager {
       throws PeerNotConnected {
     outstandingRequests.incrementAndGet();
     final BigInteger requestId = BigInteger.valueOf(requestIdCounter.getAndIncrement());
+    LOG.info("request {} id {} supports request id? {}", messageData.getCode(), requestId, supportsRequestId);
     final ResponseStream stream = createStream(requestId);
-    LOG.info("request supports request id? {}", supportsRequestId);
     sender.send(supportsRequestId ? messageData.wrapMessageData(requestId) : messageData);
     return stream;
   }
