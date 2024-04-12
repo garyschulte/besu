@@ -25,6 +25,7 @@ import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.InMemoryKeyValueStorageProvider;
 import org.hyperledger.besu.ethereum.trie.diffbased.bonsai.storage.BonsaiWorldStateKeyValueStorage;
 import org.hyperledger.besu.ethereum.trie.diffbased.common.DiffBasedValue;
+import org.hyperledger.besu.ethereum.trie.diffbased.common.worldview.DiffBasedWorldStateConfig;
 import org.hyperledger.besu.evm.internal.EvmConfiguration;
 
 import java.util.HashMap;
@@ -62,7 +63,8 @@ class BonsaiWorldStateTest {
         new BonsaiWorldState(
             InMemoryKeyValueStorageProvider.createBonsaiInMemoryWorldStateArchive(blockchain),
             bonsaiWorldStateKeyValueStorage,
-            EvmConfiguration.DEFAULT);
+            EvmConfiguration.DEFAULT,
+            new DiffBasedWorldStateConfig());
   }
 
   @ParameterizedTest
