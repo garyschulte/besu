@@ -210,7 +210,7 @@ public class Eip4762AccessWitness implements org.hyperledger.besu.datatypes.Acce
       final boolean isWrite) {
 
     AccessEvents accessEvent = touchAddress(address, treeIndex, subIndex, isWrite);
-    boolean logEnabled = false;
+    boolean logEnabled = true;
     long gas = 0;
     if (accessEvent.isBranchRead()) {
       gas += WITNESS_BRANCH_READ_COST;

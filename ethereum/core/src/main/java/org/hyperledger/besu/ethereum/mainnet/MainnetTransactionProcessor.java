@@ -500,6 +500,7 @@ public class MainnetTransactionProcessor {
           0L);
 
       // check tx gas values:
+      checkTransactionGas(transaction.getHash(), gasUsedByTransaction);
       checkTransactionGas(transaction.getHash(), gasUsedByTransaction, accessWitness);
 
       // update the coinbase
@@ -673,10 +674,7 @@ public class MainnetTransactionProcessor {
           "EXPECTED TOTAL GAS: %d  WITNESS GAS: %d%n",
           totalGas.orElse(0L), nonCodeWitnessGas.orElse(0L));
       if (totalGas.isPresent()) {
-        if (totalGas.get() != expectedGas
-            || nonCodeWitnessGas
-                .filter(witGas -> witGas != accessWitness.getTotalWitnessGas())
-                .isPresent()) {
+        if (totalGas.get() != expectedGas) {
           System.out.println(
               "Gas/witness mismatch expected ("
                   + totalGas.get()

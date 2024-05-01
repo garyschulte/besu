@@ -4,6 +4,9 @@ import org.hyperledger.besu.datatypes.Address;
 
 import org.apache.tuweni.units.bigints.UInt256;
 
+import static org.hyperledger.besu.ethereum.trie.verkle.util.Parameters.CODE_OFFSET;
+import static org.hyperledger.besu.ethereum.trie.verkle.util.Parameters.VERKLE_NODE_WIDTH;
+
 public class DebugAccessWitness extends Eip4762AccessWitness {
   private long totalWitnessGas = 0l;
 
@@ -72,18 +75,18 @@ public class DebugAccessWitness extends Eip4762AccessWitness {
 
   @Override
   public long touchCodeChunksUponContractCreation(final Address address, final long codeLength) {
-    // // note: NOT calling super so we can log the index keys
-    // long gas = 0;
-    // for (long i = 0; i < (codeLength + 30) / 31; i++) {
-    //   var treeIndex = CODE_OFFSET.add(i).divide(VERKLE_NODE_WIDTH);
-    //   var subIndex = CODE_OFFSET.add(i).mod(VERKLE_NODE_WIDTH);
-    //   System.out.println("  treeIndex: " + treeIndex + " subIndex: " + subIndex);
-    //   gas += touchAddressOnWriteAndComputeGas(address, treeIndex, subIndex);
-    // }
-    long gas = super.touchCodeChunksUponContractCreation(address, codeLength);
-    System.out.printf(
-        "touchCodeChunksUponContractCreation: address: %s codeLength: %d gas: %d acc: %d%n",
-        address, codeLength, gas, totalWitnessGas);
+     // note: NOT calling super so we can log the index keys
+    long gas = 0;
+    for (long i = 0; i < (codeLength + 30) / 31; i++) {
+     var treeIndex = CODE_OFFSET.add(i).divide(VERKLE_NODE_WIDTH);
+     var subIndex = CODE_OFFSET.add(i).mod(VERKLE_NODE_WIDTH);
+     System.out.println("  treeIndex: " + treeIndex + " subIndex: " + subIndex);
+     gas += touchAddressOnWriteAndComputeGas(address, treeIndex, subIndex);
+    }
+    // long gas = super.touchCodeChunksUponContractCreation(address, codeLength);
+    // System.out.printf(
+    //     "touchCodeChunksUponContractCreation: address: %s codeLength: %d gas: %d acc: %d%n",
+    //     address, codeLength, gas, totalWitnessGas);
     totalWitnessGas += gas;
     return gas;
   }
