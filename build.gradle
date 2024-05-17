@@ -161,8 +161,8 @@ allprojects {
       content { includeGroupByRegex('com\\.splunk\\..*') }
     }
 
-    mavenCentral()
     mavenLocal()
+    mavenCentral()
 
     // ethereum execution spec tests fixtures. Exclusively for ethereum submodule to run ref tests
     def ethExecSpecTestsRepo = ivy {

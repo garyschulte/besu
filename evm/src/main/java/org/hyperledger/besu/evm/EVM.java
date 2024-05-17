@@ -172,7 +172,7 @@ public class EVM {
    * @param frame the frame
    * @param tracing the tracing
    */
-  // Note to maintainers: lots of Java idioms and OO principals are being set aside in the
+  // Note to maintainers: lots of Java idioms and OO principles are being set aside in the
   // name of performance. This is one of the hottest sections of code.
   //
   // Please benchmark before refactoring.
@@ -201,7 +201,7 @@ public class EVM {
           frame.decrementRemainingGas(statelessGas);
         }
 
-      } catch (ArrayIndexOutOfBoundsException aiiobe) {
+      } catch (ArrayIndexOutOfBoundsException aiobe) {
         opcode = 0;
         currentOperation = endOfScriptStop;
       }

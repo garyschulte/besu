@@ -309,7 +309,7 @@ public class MainnetTransactionProcessor {
       operationTracer.tracePrepareTransaction(worldState, transaction);
 
       final long previousNonce = sender.incrementNonce();
-      LOG.trace(
+      LOG.info(
           "Incremented sender {} nonce ({} -> {})",
           senderAddress,
           previousNonce,
@@ -323,7 +323,7 @@ public class MainnetTransactionProcessor {
       final Wei upfrontGasCost =
           transaction.getUpfrontGasCost(transactionGasPrice, blobGasPrice, blobGas);
       final Wei previousBalance = sender.decrementBalance(upfrontGasCost);
-      LOG.trace(
+      LOG.info(
           "Deducted sender {} upfront gas cost {} ({} -> {})",
           senderAddress,
           upfrontGasCost,
@@ -356,7 +356,7 @@ public class MainnetTransactionProcessor {
           gasCalculator.computeBaseAccessEventsCost(accessWitness, transaction, sender);
       final long gasAvailable =
           transaction.getGasLimit() - intrinsicGas - accessListGas - accessEventCost;
-      LOG.trace(
+      LOG.info(
           "Gas available for execution {} = {} - {} - {} (limit - intrinsic - accessList)",
           gasAvailable,
           transaction.getGasLimit(),
@@ -470,7 +470,7 @@ public class MainnetTransactionProcessor {
       final Wei refundedWei = transactionGasPrice.multiply(refundedGas);
       final Wei balancePriorToRefund = sender.getBalance();
       sender.incrementBalance(refundedWei);
-      LOG.atTrace()
+      LOG.atInfo()
           .setMessage("refunded sender {}  {} wei (balance before:{} -> after:{})")
           .addArgument(senderAddress)
           .addArgument(refundedWei.toShortHexString())
@@ -478,6 +478,18 @@ public class MainnetTransactionProcessor {
           .addArgument(sender.getBalance().toShortHexString())
           .log();
       final long gasUsedByTransaction = transaction.getGasLimit() - initialFrame.getRemainingGas();
+      LOG.info(
+          "Gas used by transaction({}): {}, witness gas {}",
+          transaction.getHash().toShortHexString(),
+          gasUsedByTransaction,
+          accessWitness.getTotalWitnessGas());
+
+      LOG.info(
+          "Final sender {} balance: {} nonce: {}",
+          senderAddress,
+          sender.getBalance(),
+          sender.getNonce());
+
       operationTracer.traceEndTransaction(
           worldUpdater,
           transaction,
@@ -487,7 +499,8 @@ public class MainnetTransactionProcessor {
           gasUsedByTransaction,
           0L);
 
-      // checkTransactionGas(transaction.getHash(), gasUsedByTransaction);
+      // check tx gas values:
+      checkTransactionGas(transaction.getHash(), gasUsedByTransaction, accessWitness);
 
       // update the coinbase
       final var coinbase = worldState.getOrCreate(miningBeneficiary);
@@ -578,7 +591,6 @@ public class MainnetTransactionProcessor {
         long gasUsed =
             Long.parseLong(result.getString("gasUsed").substring(2), 16); // Convert hex to decimal
 
-        System.out.println(" expectedGas " + expectedGas);
         if (gasUsed != expectedGas) {
           System.out.println(
               "Gas used ("
@@ -626,5 +638,62 @@ public class MainnetTransactionProcessor {
     }
 
     return builder.toString();
+  }
+
+  private static Optional<Long> extractValueWithPattern(
+      final String content, final String patternString) {
+    java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(patternString);
+    java.util.regex.Matcher matcher = pattern.matcher(content);
+    if (matcher.find()) {
+      return Optional.of(matcher.group(1)).map(Long::parseLong);
+    }
+    return Optional.empty();
+  }
+
+  private static void checkTransactionGas(
+      final Hash transactionHash, final long expectedGas, final AccessWitness accessWitness) {
+    String url =
+        "https://witness.verkle-gen-devnet-6.ethpandaops.io/?hash=" + transactionHash.toHexString();
+    HttpClient client = HttpClient.newHttpClient();
+    HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
+    try {
+      HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+      // Pattern to match the "Total gas" value
+      String totalGasPattern =
+          "Total gas</div>[\\s\\S]*?<div class=\"h5 mb-0 font-weight-bold text-gray-800\">(\\d+)";
+      // Pattern to match the "Non-code witness gas" value
+      String nonCodeWitnessGasPattern =
+          "Non-code witness gas</div>[\\s\\S]*?<div class=\"h5 mb-0 mr-3 font-weight-bold text-gray-800\">(\\d+)";
+
+      // Extract and print "Total gas"
+      Optional<Long> totalGas = extractValueWithPattern(response.body(), totalGasPattern);
+
+      // Extract and print "Non-code witness gas"
+      Optional<Long> nonCodeWitnessGas =
+          extractValueWithPattern(response.body(), nonCodeWitnessGasPattern);
+      System.out.printf(
+          "EXPECTED TOTAL GAS: %d  WITNESS GAS: %d%n",
+          totalGas.orElse(0L), nonCodeWitnessGas.orElse(0L));
+      if (totalGas.isPresent()) {
+        if (totalGas.get() != expectedGas
+            || nonCodeWitnessGas
+                .filter(witGas -> witGas != accessWitness.getTotalWitnessGas())
+                .isPresent()) {
+          System.out.println(
+              "Gas/witness mismatch expected ("
+                  + totalGas.get()
+                  + ", "
+                  + nonCodeWitnessGas.orElse(-1L)
+                  + ") does not match actual gas ("
+                  + expectedGas
+                  + ", "
+                  + accessWitness.getTotalWitnessGas()
+                  + "). Transaction hash: "
+                  + transactionHash);
+        }
+      }
+    } catch (IOException | InterruptedException e) {
+      System.out.println("failed to fetch tx gas comparison");
+    }
   }
 }

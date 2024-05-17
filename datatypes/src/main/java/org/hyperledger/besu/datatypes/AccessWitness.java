@@ -32,8 +32,7 @@ public interface AccessWitness {
 
   long touchCodeChunks(Address address, long offset, long readSize, long codeLength);
 
-  default long touchCodeChunksWithoutAccessCost(
-      final Address address, final long offset, final long readSize, final long codeLength) {
-    return touchCodeChunks(address, offset, readSize, codeLength);
+  default long getTotalWitnessGas() {
+    return 0L;
   }
 }

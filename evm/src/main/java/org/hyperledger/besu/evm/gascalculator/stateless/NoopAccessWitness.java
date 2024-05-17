@@ -64,10 +64,4 @@ public class NoopAccessWitness extends Eip4762AccessWitness {
       final Address address, final long offset, final long readSize, final long codeLength) {
     return 0;
   }
-
-  @Override
-  public long touchCodeChunksWithoutAccessCost(
-      final Address address, final long offset, final long readSize, final long codeLength) {
-    return 0;
-  }
 }
