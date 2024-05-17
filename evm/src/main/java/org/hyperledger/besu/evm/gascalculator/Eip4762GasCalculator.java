@@ -78,21 +78,23 @@ public class Eip4762GasCalculator extends PragueGasCalculator {
       final Account recipient,
       final Address to,
       final boolean accountIsWarm) {
-
-    long gasCost =
-        super.callOperationGasCost(
-            frame,
-            stipend,
-            inputDataOffset,
-            inputDataLength,
-            outputDataOffset,
-            outputDataLength,
-            transferValue,
-            recipient,
-            to,
-            true);
+    final long inputDataMemoryExpansionCost =
+        memoryExpansionGasCost(frame, inputDataOffset, inputDataLength);
+    final long outputDataMemoryExpansionCost =
+        memoryExpansionGasCost(frame, outputDataOffset, outputDataLength);
+    final long memoryExpansionCost =
+        Math.max(inputDataMemoryExpansionCost, outputDataMemoryExpansionCost);
+    long gasCost = clampedAdd(callOperationBaseGasCost(), memoryExpansionCost);
+    if ((recipient == null || recipient.isEmpty()) && !transferValue.isZero()) {
+      gasCost = clampedAdd(gasCost, newAccountGasCost());
+    }
+    if (!transferValue.isZero()) {
+      gasCost =
+          clampedAdd(
+              gasCost,
+              frame.getAccessWitness().touchAndChargeValueTransfer(recipient.getAddress(), to));
+    }
     if (super.isPrecompile(to)) {
-      System.out.printf("CALL OP precompile gas cost %d\n", gasCost);
       return gasCost;
     } else {
       long statelessGas;
@@ -101,20 +103,16 @@ public class Eip4762GasCalculator extends PragueGasCalculator {
       } else {
         statelessGas = frame.getAccessWitness().touchAndChargeMessageCall(to);
       }
-      if (!transferValue.isZero()) {
-        statelessGas =
-            clampedAdd(
-                statelessGas,
-                frame.getAccessWitness().touchAndChargeValueTransfer(recipient.getAddress(), to));
-      }
       if (statelessGas == 0) {
 
         var warm = getWarmStorageReadCost();
         System.out.printf(
+            "stateless gas cost to %s recipient %s\n",
+            to.toHexString(), recipient.getAddress().toHexString());
+        System.out.printf(
             "CALL OP gas cost stateless cost==0, returning warm storage read cost of %d\n", warm);
         return warm;
       }
-      System.out.printf("CALL OP return gasCost %d + stateless %d\n", gasCost, statelessGas);
       return clampedAdd(gasCost, statelessGas);
     }
   }
