@@ -92,6 +92,7 @@ public class Eip4762GasCalculator extends PragueGasCalculator {
             to,
             true);
     if (super.isPrecompile(to)) {
+      System.out.printf("CALL OP precompile gas cost %d\n", gasCost);
       return gasCost;
     } else {
       long statelessGas;
@@ -107,8 +108,13 @@ public class Eip4762GasCalculator extends PragueGasCalculator {
                 frame.getAccessWitness().touchAndChargeValueTransfer(recipient.getAddress(), to));
       }
       if (statelessGas == 0) {
-        return getWarmStorageReadCost();
+
+        var warm = getWarmStorageReadCost();
+        System.out.printf(
+            "CALL OP gas cost stateless cost==0, returning warm storage read cost of %d\n", warm);
+        return warm;
       }
+      System.out.printf("CALL OP return gasCost %d + stateless %d\n", gasCost, statelessGas);
       return clampedAdd(gasCost, statelessGas);
     }
   }
