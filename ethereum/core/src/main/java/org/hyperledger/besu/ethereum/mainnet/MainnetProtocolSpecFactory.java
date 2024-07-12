@@ -17,6 +17,7 @@ package org.hyperledger.besu.ethereum.mainnet;
 import org.hyperledger.besu.config.GenesisConfigOptions;
 import org.hyperledger.besu.ethereum.core.MiningParameters;
 import org.hyperledger.besu.evm.internal.EvmConfiguration;
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 
 import java.math.BigInteger;
 import java.util.Optional;
@@ -29,118 +30,185 @@ public class MainnetProtocolSpecFactory {
   private final OptionalLong ecip1017EraRounds;
   private final EvmConfiguration evmConfiguration;
   private final MiningParameters miningParameters;
+  private final boolean isParallelTxEnabled;
+  private final MetricsSystem metricsSystem;
 
   public MainnetProtocolSpecFactory(
       final Optional<BigInteger> chainId,
       final boolean isRevertReasonEnabled,
       final OptionalLong ecip1017EraRounds,
       final EvmConfiguration evmConfiguration,
-      final MiningParameters miningParameters) {
+      final MiningParameters miningParameters,
+      final boolean isParallelTxEnabled,
+      final MetricsSystem metricsSystem) {
     this.chainId = chainId;
     this.isRevertReasonEnabled = isRevertReasonEnabled;
     this.ecip1017EraRounds = ecip1017EraRounds;
     this.evmConfiguration = evmConfiguration;
     this.miningParameters = miningParameters;
+    this.isParallelTxEnabled = isParallelTxEnabled;
+    this.metricsSystem = metricsSystem;
   }
 
   public ProtocolSpecBuilder frontierDefinition() {
-    return MainnetProtocolSpecs.frontierDefinition(evmConfiguration);
+    return MainnetProtocolSpecs.frontierDefinition(
+        evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder homesteadDefinition() {
-    return MainnetProtocolSpecs.homesteadDefinition(evmConfiguration);
+    return MainnetProtocolSpecs.homesteadDefinition(
+        evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder daoRecoveryInitDefinition() {
-    return MainnetProtocolSpecs.daoRecoveryInitDefinition(evmConfiguration);
+    return MainnetProtocolSpecs.daoRecoveryInitDefinition(
+        evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder daoRecoveryTransitionDefinition() {
-    return MainnetProtocolSpecs.daoRecoveryTransitionDefinition(evmConfiguration);
+    return MainnetProtocolSpecs.daoRecoveryTransitionDefinition(
+        evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder tangerineWhistleDefinition() {
-    return MainnetProtocolSpecs.tangerineWhistleDefinition(evmConfiguration);
+    return MainnetProtocolSpecs.tangerineWhistleDefinition(
+        evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder spuriousDragonDefinition() {
-    return MainnetProtocolSpecs.spuriousDragonDefinition(chainId, evmConfiguration);
+    return MainnetProtocolSpecs.spuriousDragonDefinition(
+        chainId, evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder byzantiumDefinition() {
     return MainnetProtocolSpecs.byzantiumDefinition(
-        chainId, isRevertReasonEnabled, evmConfiguration);
+        chainId, isRevertReasonEnabled, evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder constantinopleDefinition() {
     return MainnetProtocolSpecs.constantinopleDefinition(
-        chainId, isRevertReasonEnabled, evmConfiguration);
+        chainId, isRevertReasonEnabled, evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder petersburgDefinition() {
     return MainnetProtocolSpecs.petersburgDefinition(
-        chainId, isRevertReasonEnabled, evmConfiguration);
+        chainId, isRevertReasonEnabled, evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder istanbulDefinition() {
     return MainnetProtocolSpecs.istanbulDefinition(
-        chainId, isRevertReasonEnabled, evmConfiguration);
+        chainId, isRevertReasonEnabled, evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder muirGlacierDefinition() {
     return MainnetProtocolSpecs.muirGlacierDefinition(
-        chainId, isRevertReasonEnabled, evmConfiguration);
+        chainId, isRevertReasonEnabled, evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder berlinDefinition() {
-    return MainnetProtocolSpecs.berlinDefinition(chainId, isRevertReasonEnabled, evmConfiguration);
+    return MainnetProtocolSpecs.berlinDefinition(
+        chainId, isRevertReasonEnabled, evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder londonDefinition(final GenesisConfigOptions genesisConfigOptions) {
     return MainnetProtocolSpecs.londonDefinition(
-        chainId, isRevertReasonEnabled, genesisConfigOptions, evmConfiguration, miningParameters);
+        chainId,
+        isRevertReasonEnabled,
+        genesisConfigOptions,
+        evmConfiguration,
+        miningParameters,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   public ProtocolSpecBuilder arrowGlacierDefinition(
       final GenesisConfigOptions genesisConfigOptions) {
     return MainnetProtocolSpecs.arrowGlacierDefinition(
-        chainId, isRevertReasonEnabled, genesisConfigOptions, evmConfiguration, miningParameters);
+        chainId,
+        isRevertReasonEnabled,
+        genesisConfigOptions,
+        evmConfiguration,
+        miningParameters,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   public ProtocolSpecBuilder grayGlacierDefinition(
       final GenesisConfigOptions genesisConfigOptions) {
     return MainnetProtocolSpecs.grayGlacierDefinition(
-        chainId, isRevertReasonEnabled, genesisConfigOptions, evmConfiguration, miningParameters);
+        chainId,
+        isRevertReasonEnabled,
+        genesisConfigOptions,
+        evmConfiguration,
+        miningParameters,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   public ProtocolSpecBuilder parisDefinition(final GenesisConfigOptions genesisConfigOptions) {
     return MainnetProtocolSpecs.parisDefinition(
-        chainId, isRevertReasonEnabled, genesisConfigOptions, evmConfiguration, miningParameters);
+        chainId,
+        isRevertReasonEnabled,
+        genesisConfigOptions,
+        evmConfiguration,
+        miningParameters,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   public ProtocolSpecBuilder shanghaiDefinition(final GenesisConfigOptions genesisConfigOptions) {
     return MainnetProtocolSpecs.shanghaiDefinition(
-        chainId, isRevertReasonEnabled, genesisConfigOptions, evmConfiguration, miningParameters);
+        chainId,
+        isRevertReasonEnabled,
+        genesisConfigOptions,
+        evmConfiguration,
+        miningParameters,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   public ProtocolSpecBuilder cancunDefinition(final GenesisConfigOptions genesisConfigOptions) {
     return MainnetProtocolSpecs.cancunDefinition(
-        chainId, isRevertReasonEnabled, genesisConfigOptions, evmConfiguration, miningParameters);
+        chainId,
+        isRevertReasonEnabled,
+        genesisConfigOptions,
+        evmConfiguration,
+        miningParameters,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   public ProtocolSpecBuilder cancunEOFDefinition(final GenesisConfigOptions genesisConfigOptions) {
     return MainnetProtocolSpecs.cancunEOFDefinition(
-        chainId, isRevertReasonEnabled, genesisConfigOptions, evmConfiguration, miningParameters);
+        chainId,
+        isRevertReasonEnabled,
+        genesisConfigOptions,
+        evmConfiguration,
+        miningParameters,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   public ProtocolSpecBuilder pragueDefinition(final GenesisConfigOptions genesisConfigOptions) {
     return MainnetProtocolSpecs.pragueDefinition(
-        chainId, isRevertReasonEnabled, genesisConfigOptions, evmConfiguration, miningParameters);
+        chainId,
+        isRevertReasonEnabled,
+        genesisConfigOptions,
+        evmConfiguration,
+        miningParameters,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   public ProtocolSpecBuilder pragueEOFDefinition(final GenesisConfigOptions genesisConfigOptions) {
     return MainnetProtocolSpecs.pragueEOFDefinition(
-        chainId, isRevertReasonEnabled, genesisConfigOptions, evmConfiguration, miningParameters);
+        chainId,
+        isRevertReasonEnabled,
+        genesisConfigOptions,
+        evmConfiguration,
+        miningParameters,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   /**
@@ -156,7 +224,13 @@ public class MainnetProtocolSpecFactory {
    */
   public ProtocolSpecBuilder futureEipsDefinition(final GenesisConfigOptions genesisConfigOptions) {
     return MainnetProtocolSpecs.futureEipsDefinition(
-        chainId, isRevertReasonEnabled, genesisConfigOptions, evmConfiguration, miningParameters);
+        chainId,
+        isRevertReasonEnabled,
+        genesisConfigOptions,
+        evmConfiguration,
+        miningParameters,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   /**
@@ -172,57 +246,100 @@ public class MainnetProtocolSpecFactory {
   public ProtocolSpecBuilder experimentalEipsDefinition(
       final GenesisConfigOptions genesisConfigOptions) {
     return MainnetProtocolSpecs.experimentalEipsDefinition(
-        chainId, isRevertReasonEnabled, genesisConfigOptions, evmConfiguration, miningParameters);
+        chainId,
+        isRevertReasonEnabled,
+        genesisConfigOptions,
+        evmConfiguration,
+        miningParameters,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////
   // Classic Protocol Specs
   public ProtocolSpecBuilder dieHardDefinition() {
-    return ClassicProtocolSpecs.dieHardDefinition(chainId, evmConfiguration);
+    return ClassicProtocolSpecs.dieHardDefinition(
+        chainId, evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder gothamDefinition() {
-    return ClassicProtocolSpecs.gothamDefinition(chainId, ecip1017EraRounds, evmConfiguration);
+    return ClassicProtocolSpecs.gothamDefinition(
+        chainId, ecip1017EraRounds, evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder defuseDifficultyBombDefinition() {
     return ClassicProtocolSpecs.defuseDifficultyBombDefinition(
-        chainId, ecip1017EraRounds, evmConfiguration);
+        chainId, ecip1017EraRounds, evmConfiguration, isParallelTxEnabled, metricsSystem);
   }
 
   public ProtocolSpecBuilder atlantisDefinition() {
     return ClassicProtocolSpecs.atlantisDefinition(
-        chainId, isRevertReasonEnabled, ecip1017EraRounds, evmConfiguration);
+        chainId,
+        isRevertReasonEnabled,
+        ecip1017EraRounds,
+        evmConfiguration,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   public ProtocolSpecBuilder aghartaDefinition() {
     return ClassicProtocolSpecs.aghartaDefinition(
-        chainId, isRevertReasonEnabled, ecip1017EraRounds, evmConfiguration);
+        chainId,
+        isRevertReasonEnabled,
+        ecip1017EraRounds,
+        evmConfiguration,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   public ProtocolSpecBuilder phoenixDefinition() {
     return ClassicProtocolSpecs.phoenixDefinition(
-        chainId, isRevertReasonEnabled, ecip1017EraRounds, evmConfiguration);
+        chainId,
+        isRevertReasonEnabled,
+        ecip1017EraRounds,
+        evmConfiguration,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   public ProtocolSpecBuilder thanosDefinition() {
     return ClassicProtocolSpecs.thanosDefinition(
-        chainId, isRevertReasonEnabled, ecip1017EraRounds, evmConfiguration);
+        chainId,
+        isRevertReasonEnabled,
+        ecip1017EraRounds,
+        evmConfiguration,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   public ProtocolSpecBuilder magnetoDefinition() {
     return ClassicProtocolSpecs.magnetoDefinition(
-        chainId, isRevertReasonEnabled, ecip1017EraRounds, evmConfiguration);
+        chainId,
+        isRevertReasonEnabled,
+        ecip1017EraRounds,
+        evmConfiguration,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   public ProtocolSpecBuilder mystiqueDefinition() {
     return ClassicProtocolSpecs.mystiqueDefinition(
-        chainId, isRevertReasonEnabled, ecip1017EraRounds, evmConfiguration);
+        chainId,
+        isRevertReasonEnabled,
+        ecip1017EraRounds,
+        evmConfiguration,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 
   public ProtocolSpecBuilder spiralDefinition() {
     return ClassicProtocolSpecs.spiralDefinition(
-        chainId, isRevertReasonEnabled, ecip1017EraRounds, evmConfiguration);
+        chainId,
+        isRevertReasonEnabled,
+        ecip1017EraRounds,
+        evmConfiguration,
+        isParallelTxEnabled,
+        metricsSystem);
   }
 }

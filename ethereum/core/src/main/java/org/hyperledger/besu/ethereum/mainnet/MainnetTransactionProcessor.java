@@ -462,7 +462,6 @@ public class MainnetTransactionProcessor {
       final long gasUsedByTransaction = transaction.getGasLimit() - initialFrame.getRemainingGas();
 
       // update the coinbase
-      final var coinbase = worldState.getOrCreate(miningBeneficiary);
       final long usedGas = transaction.getGasLimit() - refundedGas;
       final CoinbaseFeePriceCalculator coinbaseCalculator;
       if (blockHeader.getBaseFee().isPresent()) {
@@ -484,6 +483,9 @@ public class MainnetTransactionProcessor {
       final Wei coinbaseWeiDelta =
           coinbaseCalculator.price(usedGas, transactionGasPrice, blockHeader.getBaseFee());
 
+      operationTracer.traceBeforeRewardTransaction(worldUpdater, transaction, coinbaseWeiDelta);
+
+      final var coinbase = worldState.getOrCreate(miningBeneficiary);
       coinbase.incrementBalance(coinbaseWeiDelta);
 
       operationTracer.traceEndTransaction(

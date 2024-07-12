@@ -208,6 +208,9 @@ public abstract class BesuControllerBuilder implements MiningParameterOverrides 
 
   private int numberOfBlocksToCache = 0;
 
+  /** whether parallel transaction processing is enabled or not */
+  protected boolean isParallelTxEnabled;
+
   /** Instantiates a new Besu controller builder. */
   protected BesuControllerBuilder() {}
 
@@ -526,6 +529,19 @@ public abstract class BesuControllerBuilder implements MiningParameterOverrides 
    */
   public BesuControllerBuilder randomPeerPriority(final Boolean randomPeerPriority) {
     this.randomPeerPriority = randomPeerPriority;
+    return this;
+  }
+
+  /**
+   * Sets whether parallel transaction processing is enabled. When parallel transaction processing
+   * is enabled, transactions within a block can be processed in parallel and potentially improving
+   * performance
+   *
+   * @param isParallelTxEnabled true to enable parallel transaction
+   * @return the besu controller
+   */
+  public BesuControllerBuilder isParallelTxEnabled(final boolean isParallelTxEnabled) {
+    this.isParallelTxEnabled = isParallelTxEnabled;
     return this;
   }
 

@@ -94,7 +94,9 @@ class PoWBlockCreatorTest extends AbstractBlockCreatorTest {
                         false,
                         EvmConfiguration.DEFAULT,
                         MiningParameters.MINING_DISABLED,
-                        new BadBlockManager())
+                        new BadBlockManager(),
+                        false,
+                        new NoOpMetricsSystem())
                     .createProtocolSchedule())
             .build();
 
@@ -150,7 +152,9 @@ class PoWBlockCreatorTest extends AbstractBlockCreatorTest {
                         false,
                         EvmConfiguration.DEFAULT,
                         MiningParameters.MINING_DISABLED,
-                        new BadBlockManager())
+                        new BadBlockManager(),
+                        false,
+                        new NoOpMetricsSystem())
                     .createProtocolSchedule())
             .build();
 
@@ -196,7 +200,9 @@ class PoWBlockCreatorTest extends AbstractBlockCreatorTest {
                 false,
                 EvmConfiguration.DEFAULT,
                 MiningParameters.MINING_DISABLED,
-                new BadBlockManager())
+                new BadBlockManager(),
+                false,
+                new NoOpMetricsSystem())
             .createProtocolSchedule();
     final ExecutionContextTestFixture executionContextTestFixture =
         ExecutionContextTestFixture.builder().protocolSchedule(protocolSchedule).build();
@@ -265,7 +271,9 @@ class PoWBlockCreatorTest extends AbstractBlockCreatorTest {
                 false,
                 EvmConfiguration.DEFAULT,
                 MiningParameters.MINING_DISABLED,
-                new BadBlockManager())
+                new BadBlockManager(),
+                false,
+                new NoOpMetricsSystem())
             .createProtocolSchedule();
     final ExecutionContextTestFixture executionContextTestFixture =
         ExecutionContextTestFixture.builder().protocolSchedule(protocolSchedule).build();
