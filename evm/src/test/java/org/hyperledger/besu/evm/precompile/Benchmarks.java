@@ -642,18 +642,22 @@ public class Benchmarks {
 
     final double elapsed = timer.elapsed(TimeUnit.NANOSECONDS) / 1.0e9D;
     final double perCall = elapsed / MATH_ITERATIONS;
+    System.err.printf("%s at %d per call, %.2f MGas/sec\n",
+        contract.getName(),
+        contract.gasRequirement(arg),
+        contract.gasRequirement(arg) * 1000 / elapsed / 1.0e6D);
     return perCall * GAS_PER_SECOND_STANDARD;
   }
 
   public static void main(final String[] args) {
-    benchSecp256k1Recover();
-    benchSha256();
-    benchKeccak256();
-    benchRipeMD();
-    benchBNADD();
-    benchBNMUL();
-    benchBNPairing();
-    benchModExp();
+//    benchSecp256k1Recover();
+//    benchSha256();
+//    benchKeccak256();
+//    benchRipeMD();
+//    benchBNADD();
+//    benchBNMUL();
+//    benchBNPairing();
+//    benchModExp();
     benchBLS12G1Add();
     benchBLS12G1Mul();
     benchBLS12G1MultiExp();
