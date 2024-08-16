@@ -41,6 +41,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
+import org.hyperledger.besu.evm.gascalculator.PragueGasCalculator;
 
 @SuppressWarnings("UnusedMethod")
 public class Benchmarks {
@@ -76,7 +77,7 @@ public class Benchmarks {
 
   private static void benchSecp256k1Recover() {
     final SignatureAlgorithm signatureAlgorithm = SignatureAlgorithmFactory.getInstance();
-
+    final var contract = new ECRECPrecompiledContract(new PragueGasCalculator());
     final SECPPrivateKey privateKey =
         signatureAlgorithm.createPrivateKey(
             new BigInteger("c85ef7d79691fe79573b1a7064c19c1a9819ebdbd1faaab1a8ec92344438aaf4", 16));
@@ -97,6 +98,10 @@ public class Benchmarks {
     final double elapsed = timer.elapsed(TimeUnit.NANOSECONDS) / 1.0e9D;
     final double perCall = elapsed / MATH_ITERATIONS;
     final double gasSpent = perCall * GAS_PER_SECOND_STANDARD;
+    System.err.printf("%s at %d per call, %.2f MGas/sec\n",
+        contract.getName(),
+        contract.gasRequirement(null),
+        contract.gasRequirement(null) * 1000 / elapsed / 1.0e6D);
 
     System.out.printf("secp256k1 signature recovery for %,d gas.%n", (int) gasSpent);
   }
@@ -650,7 +655,7 @@ public class Benchmarks {
   }
 
   public static void main(final String[] args) {
-//    benchSecp256k1Recover();
+    benchSecp256k1Recover();
 //    benchSha256();
 //    benchKeccak256();
 //    benchRipeMD();
