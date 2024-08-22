@@ -165,6 +165,8 @@ allprojects {
       content { includeGroupByRegex('com\\.gitlab\\.javafuzz(\\..*)?') }
     }
 
+    mavenLocal()
+
     mavenCentral()
 
     // ethereum execution spec tests fixtures. Exclusively for ethereum submodule to run ref tests
