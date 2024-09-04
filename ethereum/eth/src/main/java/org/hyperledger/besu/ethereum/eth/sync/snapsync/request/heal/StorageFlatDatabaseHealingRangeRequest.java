@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -154,14 +155,32 @@ public class StorageFlatDatabaseHealingRangeRequest extends SnapDataRequest {
       Map<Bytes32, Bytes> flatDbSlots = new TreeMap<>(slots);
 
       try {
-        MerkleTrie<Bytes, Bytes> storageTrie =
+
+        final MerkleTrie<Bytes, Bytes> storageTrie =
             new StoredMerklePatriciaTrie<>(
-                (location, hash) ->
-                    worldStateStorageCoordinator.getAccountStorageTrieNode(
-                        accountHash, location, hash),
+                (location, hash) -> {
+                  Optional<Bytes> accountStorageTrieNode =
+                      worldStateStorageCoordinator.getAccountStorageTrieNode(
+                          accountHash, location, hash);
+                  if (hash.equals(
+                      Bytes.fromHexString(
+                          "0x267b3bb0ed916698d79ef287f7075fcb8ed14c5f7da6e804823d376404e9f781"))) {
+                    System.out.println(
+                        "node " + accountHash + " " + location + " " + accountStorageTrieNode);
+                  }
+                  return accountStorageTrieNode;
+                },
                 storageRoot,
                 Function.identity(),
                 Function.identity());
+        //        final MerkleTrie<Bytes, Bytes> storageTrie =
+        //            new StoredMerklePatriciaTrie<>(
+        //                (location, hash) ->
+        //                    worldStateStorageCoordinator.getAccountStorageTrieNode(
+        //                        accountHash, location, hash),
+        //                storageRoot,
+        //                Function.identity(),
+        //                Function.identity());
 
         // Retrieve the data from the trie in order to know what needs to be fixed in the flat
         // database
@@ -187,6 +206,7 @@ public class StorageFlatDatabaseHealingRangeRequest extends SnapDataRequest {
             mtex.getHash(),
             mtex.getLocation(),
             accountHash);
+        LOG.error("stack trace", mtex);
         throw mtex;
       }
 
