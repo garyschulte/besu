@@ -120,9 +120,19 @@ public class WorldStateProofProvider {
    */
   public List<Bytes> getStorageProofRelatedNodes(
       final Bytes32 storageRoot, final Bytes32 accountHash, final Bytes32 slotHash) {
-    final Proof<Bytes> storageProof =
-        newAccountStorageTrie(Hash.wrap(accountHash), storageRoot).getValueWithProof(slotHash);
-    return storageProof.getProofRelatedNodes();
+
+    try {
+      final Proof<Bytes> storageProof =
+          newAccountStorageTrie(Hash.wrap(accountHash), storageRoot).getValueWithProof(slotHash);
+      return storageProof.getProofRelatedNodes();
+    } catch (MerkleTrieException mtex) {
+      LOG.error(
+          "Get storage proof exception for root {} accounthash {}, slotHash {}",
+          storageRoot,
+          accountHash,
+          slotHash);
+      throw mtex;
+    }
   }
 
   private MerkleTrie<Bytes, Bytes> newAccountStateTrie(final Bytes32 rootHash) {
