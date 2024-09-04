@@ -56,7 +56,8 @@ import org.slf4j.LoggerFactory;
  */
 public class StorageFlatDatabaseHealingRangeRequest extends SnapDataRequest {
 
-  private static final Logger LOG = LoggerFactory.getLogger(StorageFlatDatabaseHealingRangeRequest.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(StorageFlatDatabaseHealingRangeRequest.class);
   private final Hash accountHash;
   private final Bytes32 storageRoot;
   private final Bytes32 startKeyHash;
@@ -150,36 +151,44 @@ public class StorageFlatDatabaseHealingRangeRequest extends SnapDataRequest {
       final BonsaiWorldStateKeyValueStorage.Updater bonsaiUpdater =
           (BonsaiWorldStateKeyValueStorage.Updater) updater;
 
-      MerkleTrie<Bytes, Bytes> storageTrie;
-      try {
-        storageTrie = new StoredMerklePatriciaTrie<>(
-            (location, hash) -> worldStateStorageCoordinator.getAccountStorageTrieNode(accountHash,
-                location, hash), storageRoot, Function.identity(), Function.identity());
-      } catch (MerkleTrieException mtex) {
-        LOG.error("Failed to load account storage hash {} location {} for account hash {}",
-            mtex.getHash(), mtex.getLocation(), accountHash);
-        throw mtex;
-      }
-
       Map<Bytes32, Bytes> flatDbSlots = new TreeMap<>(slots);
 
-      // Retrieve the data from the trie in order to know what needs to be fixed in the flat
-      // database
-      final RangeStorageEntriesCollector collector =
-          RangeStorageEntriesCollector.createCollector(
-              startKeyHash,
-              slots.isEmpty() ? endKeyHash : slots.lastKey(),
-              slots.isEmpty()
-                  ? snapSyncConfiguration.getLocalFlatStorageCountToHealPerRequest()
-                  : Integer.MAX_VALUE,
-              Integer.MAX_VALUE);
-      final TrieIterator<Bytes> visitor = RangeStorageEntriesCollector.createVisitor(collector);
-      slots =
-          (TreeMap<Bytes32, Bytes>)
-              storageTrie.entriesFrom(
-                  root ->
-                      RangeStorageEntriesCollector.collectEntries(
-                          collector, visitor, root, startKeyHash));
+      try {
+        MerkleTrie<Bytes, Bytes> storageTrie =
+            new StoredMerklePatriciaTrie<>(
+                (location, hash) ->
+                    worldStateStorageCoordinator.getAccountStorageTrieNode(
+                        accountHash, location, hash),
+                storageRoot,
+                Function.identity(),
+                Function.identity());
+
+        // Retrieve the data from the trie in order to know what needs to be fixed in the flat
+        // database
+        final RangeStorageEntriesCollector collector =
+            RangeStorageEntriesCollector.createCollector(
+                startKeyHash,
+                slots.isEmpty() ? endKeyHash : slots.lastKey(),
+                slots.isEmpty()
+                    ? snapSyncConfiguration.getLocalFlatStorageCountToHealPerRequest()
+                    : Integer.MAX_VALUE,
+                Integer.MAX_VALUE);
+        final TrieIterator<Bytes> visitor = RangeStorageEntriesCollector.createVisitor(collector);
+        slots =
+            (TreeMap<Bytes32, Bytes>)
+                storageTrie.entriesFrom(
+                    root ->
+                        RangeStorageEntriesCollector.collectEntries(
+                            collector, visitor, root, startKeyHash));
+
+      } catch (MerkleTrieException mtex) {
+        LOG.error(
+            "Failed to load account storage hash {} location {} for account hash {}",
+            mtex.getHash(),
+            mtex.getLocation(),
+            accountHash);
+        throw mtex;
+      }
 
       // Process each slot
       slots.forEach(
