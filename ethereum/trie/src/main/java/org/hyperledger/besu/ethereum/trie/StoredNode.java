@@ -131,14 +131,18 @@ public class StoredNode<V> implements Node<V> {
           nodeFactory
               .retrieve(location, hash)
               .orElseThrow(
-                  () ->
-                      new MerkleTrieException(
-                          "Unable to load trie node value for hash "
-                              + hash
-                              + " location "
-                              + location,
-                          hash,
-                          location));
+                  () -> {
+                    var z =
+                        new MerkleTrieException(
+                            "Unable to load trie node value for hash "
+                                + hash
+                                + " location "
+                                + location,
+                            hash,
+                            location);
+                    z.printStackTrace();
+                    return z;
+                  });
     }
 
     return loaded;
