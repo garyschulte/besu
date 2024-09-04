@@ -24,6 +24,7 @@ import org.hyperledger.besu.ethereum.eth.sync.snapsync.SnapWorldDownloadState;
 import org.hyperledger.besu.ethereum.eth.sync.snapsync.request.SnapDataRequest;
 import org.hyperledger.besu.ethereum.proof.WorldStateProofProvider;
 import org.hyperledger.besu.ethereum.trie.MerkleTrie;
+import org.hyperledger.besu.ethereum.trie.MerkleTrieException;
 import org.hyperledger.besu.ethereum.trie.RangeManager;
 import org.hyperledger.besu.ethereum.trie.RangeStorageEntriesCollector;
 import org.hyperledger.besu.ethereum.trie.TrieIterator;
@@ -45,6 +46,8 @@ import kotlin.collections.ArrayDeque;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.rlp.RLP;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The StorageFlatDatabaseHealingRangeRequest class represents a request to heal a range of storage
@@ -53,6 +56,7 @@ import org.apache.tuweni.rlp.RLP;
  */
 public class StorageFlatDatabaseHealingRangeRequest extends SnapDataRequest {
 
+  private static final Logger LOG = LoggerFactory.getLogger(StorageFlatDatabaseHealingRangeRequest.class);
   private final Hash accountHash;
   private final Bytes32 storageRoot;
   private final Bytes32 startKeyHash;
@@ -146,14 +150,16 @@ public class StorageFlatDatabaseHealingRangeRequest extends SnapDataRequest {
       final BonsaiWorldStateKeyValueStorage.Updater bonsaiUpdater =
           (BonsaiWorldStateKeyValueStorage.Updater) updater;
 
-      final MerkleTrie<Bytes, Bytes> storageTrie =
-          new StoredMerklePatriciaTrie<>(
-              (location, hash) ->
-                  worldStateStorageCoordinator.getAccountStorageTrieNode(
-                      accountHash, location, hash),
-              storageRoot,
-              Function.identity(),
-              Function.identity());
+      MerkleTrie<Bytes, Bytes> storageTrie;
+      try {
+        storageTrie = new StoredMerklePatriciaTrie<>(
+            (location, hash) -> worldStateStorageCoordinator.getAccountStorageTrieNode(accountHash,
+                location, hash), storageRoot, Function.identity(), Function.identity());
+      } catch (MerkleTrieException mtex) {
+        LOG.error("Failed to load account storage hash {} location {} for account hash {}",
+            mtex.getHash(), mtex.getLocation(), accountHash);
+        throw mtex;
+      }
 
       Map<Bytes32, Bytes> flatDbSlots = new TreeMap<>(slots);
 
