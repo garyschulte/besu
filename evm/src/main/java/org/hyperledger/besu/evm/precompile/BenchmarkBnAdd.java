@@ -14,9 +14,10 @@
  */
 package org.hyperledger.besu.evm.precompile;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.hyperledger.besu.crypto.Hash.keccak256;
-
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableMap;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.crypto.Hash;
 import org.hyperledger.besu.crypto.KeyPair;
 import org.hyperledger.besu.crypto.SECPPrivateKey;
@@ -37,13 +38,11 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableMap;
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.hyperledger.besu.crypto.Hash.keccak256;
 
 @SuppressWarnings("UnusedMethod")
-public class Benchmarks {
+public class BenchmarkBnAdd {
 
   static final Random random = new Random();
 
