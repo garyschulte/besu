@@ -14,9 +14,18 @@
  */
 package org.hyperledger.besu.evm.precompile;
 
+import com.sun.jna.ptr.IntByReference;
+import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
+import org.hyperledger.besu.evm.frame.MessageFrame;
+import org.hyperledger.besu.nativelib.constantine.LibConstantineEIP2537;
 import org.hyperledger.besu.nativelib.gnark.LibGnarkEIP2537;
 
 import org.apache.tuweni.bytes.Bytes;
+
+import javax.annotation.Nonnull;
+import java.util.Optional;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /** The type BLS12_G1 MultiExp precompiled contract. */
 public class BLS12G1MultiExpPrecompiledContract extends AbstractBLS12PrecompiledContract {
@@ -29,6 +38,23 @@ public class BLS12G1MultiExpPrecompiledContract extends AbstractBLS12Precompiled
         "BLS12_G1MULTIEXP",
         LibGnarkEIP2537.BLS12_G1MULTIEXP_OPERATION_SHIM_VALUE,
         Integer.MAX_VALUE / PARAMETER_LENGTH * PARAMETER_LENGTH);
+  }
+
+  @Nonnull
+  @Override
+  public PrecompileContractResult computePrecompile(
+      final Bytes input, @Nonnull final MessageFrame messageFrame) {
+
+    final int inputSize = Math.min(this.inputLimit, input.size());
+    try {
+      final byte[] result = LibConstantineEIP2537.g1msm(input.slice(0, inputSize).toArrayUnsafe());
+      return PrecompileContractResult.success(Bytes.wrap(result));
+    } catch(RuntimeException ex) {
+      final String errorMessage = ex.getMessage();
+      messageFrame.setRevertReason(Bytes.wrap(errorMessage.getBytes(UTF_8)));
+      return PrecompileContractResult.halt(
+          null, Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR));
+    }
   }
 
   @Override

@@ -52,7 +52,7 @@ public abstract class AbstractBLS12PrecompiledContract implements PrecompiledCon
 
   private final String name;
   private final byte operationId;
-  private final int inputLimit;
+  protected final int inputLimit;
 
   /**
    * Instantiates a new Abstract BLS12 precompiled contract.

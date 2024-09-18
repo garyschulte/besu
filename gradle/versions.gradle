@@ -155,7 +155,7 @@ dependencyManagement {
 
     dependency 'org.fusesource.jansi:jansi:2.4.1'
 
-    dependencySet(group: 'org.hyperledger.besu', version: '0.9.5') {
+    dependencySet(group: 'org.hyperledger.besu', version: '0.9.6-CONSTANTINE') {
       entry 'arithmetic'
       entry 'ipa-multipoint'
       entry 'bls12-381'
@@ -163,6 +163,7 @@ dependencyManagement {
       entry 'secp256r1'
       entry 'blake2bf'
       entry 'gnark'
+      entry 'constantine'
     }
 
     dependencySet(group: 'org.immutables', version: '2.10.1') {
