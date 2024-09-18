@@ -14,9 +14,9 @@
  */
 package org.hyperledger.besu.evm.precompile;
 
-import org.hyperledger.besu.nativelib.gnark.LibGnarkEIP2537;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.nativelib.bls12_381.LibEthPairings;
 
 /** The BLS12_G2 MultiExp precompiled contract. */
 public class BLS12G2MultiExpPrecompiledContract extends AbstractBLS12PrecompiledContract {
@@ -27,7 +27,7 @@ public class BLS12G2MultiExpPrecompiledContract extends AbstractBLS12Precompiled
   public BLS12G2MultiExpPrecompiledContract() {
     super(
         "BLS12_G2MULTIEXP",
-        LibGnarkEIP2537.BLS12_G2MULTIEXP_OPERATION_SHIM_VALUE,
+        LibEthPairings.BLS12_G2MULTIEXP_OPERATION_RAW_VALUE,
         Integer.MAX_VALUE / PARAMETER_LENGTH * PARAMETER_LENGTH);
   }
 
