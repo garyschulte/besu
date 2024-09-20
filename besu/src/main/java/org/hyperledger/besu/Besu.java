@@ -24,10 +24,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.RunLast;
 
+import java.util.Locale;
+
 /** Besu bootstrap class. */
 public final class Besu {
   /** Default constructor. */
-  public Besu() {}
+  public Besu() {
+  }
 
   /**
    * The main entrypoint to Besu application
@@ -35,15 +38,11 @@ public final class Besu {
    * @param args command line arguments.
    */
   public static void main(final String... args) {
+    setupNative();
     setupLogging();
     final BesuCommand besuCommand = DaggerBesuComponent.create().getBesuCommand();
-    int exitCode =
-        besuCommand.parse(
-            new RunLast(),
-            besuCommand.parameterExceptionHandler(),
-            besuCommand.executionExceptionHandler(),
-            System.in,
-            args);
+    int exitCode = besuCommand.parse(new RunLast(), besuCommand.parameterExceptionHandler(),
+        besuCommand.executionExceptionHandler(), System.in, args);
 
     System.exit(exitCode);
   }
@@ -56,20 +55,17 @@ public final class Besu {
     try {
       InternalLoggerFactory.setDefaultFactory(Log4J2LoggerFactory.INSTANCE);
     } catch (Throwable t) {
-      System.out.printf(
-          "Could not set netty log4j logger factory: %s - %s%n",
+      System.out.printf("Could not set netty log4j logger factory: %s - %s%n",
           t.getClass().getSimpleName(), t.getMessage());
     }
     try {
-      System.setProperty(
-          "vertx.logger-delegate-factory-class-name",
+      System.setProperty("vertx.logger-delegate-factory-class-name",
           "io.vertx.core.logging.Log4j2LogDelegateFactory");
-      System.setProperty(
-          "log4j.configurationFactory", BesuLoggingConfigurationFactory.class.getName());
+      System.setProperty("log4j.configurationFactory",
+          BesuLoggingConfigurationFactory.class.getName());
       System.setProperty("log4j.skipJansi", String.valueOf(false));
     } catch (Throwable t) {
-      System.out.printf(
-          "Could not set logging system property: %s - %s%n",
+      System.out.printf("Could not set logging system property: %s - %s%n",
           t.getClass().getSimpleName(), t.getMessage());
     }
   }
@@ -93,5 +89,47 @@ public final class Besu {
         logger.error(String.format("Uncaught exception in thread \"%s\"", thread.getName()), error);
       }
     };
+  }
+
+  /**
+   * Set up the system jna path to include the paths used by besu-native.  Different JVMs
+   * have different expectations about platform-arch strings for jna library locations.  This
+   * method ensures we at least have the conventions used in besu-native.
+   */
+  public static void setupNative() {
+    // Get existing jna.library.path if set, otherwise use an empty string
+    String currentLibraryPath = System.getProperty("jna.library.path", "");
+
+    // Get the OS and architecture properties
+    String os = System.getProperty("os.name").toLowerCase(Locale.ENGLISH);
+    String arch = System.getProperty("os.arch");
+
+    // Determine the correct directory based on OS and architecture
+    String additionalLibraryPath = "";
+
+    if (os.contains("linux")) {
+      if (arch.equalsIgnoreCase("x86_64") || arch.equalsIgnoreCase("amd64")) {
+        additionalLibraryPath = "linux-gnu-x86_64";
+      } else if (arch.equalsIgnoreCase("aarch64")) {
+        additionalLibraryPath = "linux-gnu-aarch64";
+      }
+    } else if (os.contains("mac")) {
+      if (arch.equalsIgnoreCase("x86_64")) {
+        additionalLibraryPath = "darwin-x86-64";
+      } else if (arch.equalsIgnoreCase("aarch64")) {
+        additionalLibraryPath = "darwin-aarch64";
+      }
+    }
+
+    // If current path is not empty, append with the system path separator
+    if (!currentLibraryPath.isEmpty()) {
+      currentLibraryPath += System.getProperty("path.separator");
+    }
+
+    // Add the new path
+    currentLibraryPath += additionalLibraryPath;
+
+    // Set the updated jna.library.path
+    System.setProperty("jna.library.path", currentLibraryPath);
   }
 }
