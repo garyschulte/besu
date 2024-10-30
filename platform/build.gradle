@@ -141,7 +141,7 @@ dependencies {
     api 'org.hyperledger.besu:arithmetic:0.9.7'
     api 'org.hyperledger.besu:blake2bf:0.9.7'
     api 'org.hyperledger.besu:bls12-381:0.9.7'
-    api 'org.hyperledger.besu:gnark:0.9.7'
+    api 'org.hyperledger.besu:gnark:1.0.0-LOCAL'
     api 'org.hyperledger.besu:ipa-multipoint:0.9.7'
     api 'org.hyperledger.besu:secp256k1:0.9.7'
     api 'org.hyperledger.besu:secp256r1:0.9.7'
