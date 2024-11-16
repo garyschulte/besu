@@ -900,17 +900,6 @@ public abstract class AbstractBlockPropagationManagerTest {
   }
 
   @Test
-  public void shouldRestartWhenTTDReachedReturnsFalseAfterFinalizing() {
-    blockPropagationManager.start();
-    syncState.setReachedTerminalDifficulty(true);
-    blockPropagationManager.onNewUnverifiedForkchoice(
-        new ForkchoiceEvent(null, null, this.finalizedHash));
-    assertThat(blockPropagationManager.isRunning()).isFalse();
-    syncState.setReachedTerminalDifficulty(false);
-    assertThat(blockPropagationManager.isRunning()).isTrue();
-  }
-
-  @Test
   public void shouldNotListenToNewBlockHashesAnnouncementsWhenTTDReachedAndFinal() {
     blockchainUtil.importFirstBlocks(2);
     final Block nextBlock = blockchainUtil.getBlock(2);
@@ -928,7 +917,6 @@ public abstract class AbstractBlockPropagationManagerTest {
                     nextBlock.getHash(), nextBlock.getHeader().getNumber())));
     final Responder responder = RespondingEthPeer.blockchainResponder(getFullBlockchain());
 
-    syncState.setReachedTerminalDifficulty(true);
     blockPropagationManager.onNewUnverifiedForkchoice(
         new ForkchoiceEvent(null, null, this.finalizedHash));
     // Broadcast message
@@ -957,7 +945,6 @@ public abstract class AbstractBlockPropagationManagerTest {
             maxMessageSize);
     final Responder responder = RespondingEthPeer.blockchainResponder(getFullBlockchain());
 
-    syncState.setReachedTerminalDifficulty(true);
     blockPropagationManager.onNewUnverifiedForkchoice(
         new ForkchoiceEvent(null, null, this.finalizedHash));
     // Broadcast message
@@ -974,7 +961,6 @@ public abstract class AbstractBlockPropagationManagerTest {
 
     blockPropagationManager.start();
 
-    syncState.setReachedTerminalDifficulty(true);
     blockPropagationManager.onNewUnverifiedForkchoice(
         new ForkchoiceEvent(null, null, this.finalizedHash));
     blockchainUtil.importBlockAtIndex(2);

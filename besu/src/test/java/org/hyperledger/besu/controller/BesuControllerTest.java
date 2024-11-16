@@ -126,34 +126,4 @@ public class BesuControllerTest {
 
     assertThat(besuControllerBuilder).isInstanceOf(MergeBesuControllerBuilder.class);
   }
-
-  @Test
-  public void postMergeCheckpointSyncWithTotalDifficultyEqualsTTDUsesTransitionControllerBuilder()
-      throws IOException {
-    final GenesisConfigFile mergeAtGenesisFile =
-        GenesisConfigFile.fromResource(
-            "/invalid_post_merge_checkpoint_total_difficulty_same_as_TTD.json");
-
-    final BesuControllerBuilder besuControllerBuilder =
-        new BesuController.Builder().fromGenesisFile(mergeAtGenesisFile, SyncMode.CHECKPOINT);
-
-    assertThat(besuControllerBuilder).isInstanceOf(TransitionBesuControllerBuilder.class);
-  }
-
-  @Test
-  public void preMergeCheckpointSyncUsesTransitionControllerBuilder() {
-    final BesuControllerBuilder besuControllerBuilder =
-        new BesuController.Builder()
-            .fromGenesisFile(GenesisConfigFile.mainnet(), SyncMode.CHECKPOINT);
-
-    assertThat(besuControllerBuilder).isInstanceOf(TransitionBesuControllerBuilder.class);
-  }
-
-  @Test
-  public void nonCheckpointSyncUsesTransitionControllerBuild() {
-    final BesuControllerBuilder besuControllerBuilder =
-        new BesuController.Builder().fromGenesisFile(GenesisConfigFile.mainnet(), SyncMode.SNAP);
-
-    assertThat(besuControllerBuilder).isInstanceOf(TransitionBesuControllerBuilder.class);
-  }
 }

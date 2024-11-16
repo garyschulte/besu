@@ -107,14 +107,11 @@ public class BackwardSyncAlgSpec {
   public void shouldWaitWhenNotReady() throws Exception {
     doReturn(false).when(context).isReady();
     when(context.getSyncState().isInitialSyncPhaseDone()).thenReturn(Boolean.TRUE);
-    when(context.getSyncState().subscribeTTDReached(any())).thenReturn(88L);
     when(context.getSyncState().subscribeCompletionReached(any())).thenReturn(99L);
 
     final CompletableFuture<Void> voidCompletableFuture = algorithm.waitForReady();
 
-    verify(context.getSyncState()).subscribeTTDReached(ttdCaptor.capture());
     verify(context.getSyncState()).subscribeCompletionReached(completionCaptor.capture());
-    verify(context.getSyncState(), never()).unsubscribeTTDReached(anyLong());
     assertThat(voidCompletableFuture).isNotCompleted();
 
     ttdCaptor.getValue().onTTDReached(true);
@@ -129,16 +126,12 @@ public class BackwardSyncAlgSpec {
   public void shouldNotWaitWhenReady() throws Exception {
     doReturn(true).when(context).isReady();
 
-    when(context.getSyncState().subscribeTTDReached(any())).thenReturn(88L);
     when(context.getSyncState().subscribeCompletionReached(any())).thenReturn(99L);
 
     final CompletableFuture<Void> voidCompletableFuture = algorithm.waitForReady();
     voidCompletableFuture.get(1, TimeUnit.SECONDS);
     assertThat(voidCompletableFuture).isCompleted();
 
-    verify(context.getSyncState()).subscribeTTDReached(ttdCaptor.capture());
-
-    verify(context.getSyncState()).unsubscribeTTDReached(88L);
     verify(context.getSyncState()).unsubscribeInitialConditionReached(99L);
   }
 
@@ -146,7 +139,6 @@ public class BackwardSyncAlgSpec {
   public void shouldAwokeWhenTTDReachedAndReady() throws Exception {
     doReturn(false).when(context).isReady();
 
-    when(context.getSyncState().subscribeTTDReached(any())).thenReturn(88L);
     when(context.getSyncState().subscribeCompletionReached(any())).thenReturn(99L);
     when(context.getEthContext().getEthPeers().peerCount()).thenReturn(1);
 
@@ -154,7 +146,6 @@ public class BackwardSyncAlgSpec {
 
     Thread.sleep(50);
     assertThat(voidCompletableFuture).isNotCompleted();
-    verify(context.getSyncState()).subscribeTTDReached(ttdCaptor.capture());
 
     doReturn(true).when(context).isReady();
     Thread.sleep(50);
@@ -165,7 +156,6 @@ public class BackwardSyncAlgSpec {
     voidCompletableFuture.get(200, TimeUnit.MILLISECONDS);
     assertThat(voidCompletableFuture).isCompleted();
 
-    verify(context.getSyncState()).unsubscribeTTDReached(88L);
     verify(context.getSyncState()).unsubscribeInitialConditionReached(99L);
   }
 
@@ -173,7 +163,6 @@ public class BackwardSyncAlgSpec {
   public void shouldAwokeWhenConditionReachedAndReady() throws Exception {
     doReturn(false).when(context).isReady();
 
-    when(context.getSyncState().subscribeTTDReached(any())).thenReturn(88L);
     when(context.getSyncState().subscribeCompletionReached(any())).thenReturn(99L);
     when(context.getEthContext().getEthPeers().peerCount()).thenReturn(1);
 
@@ -192,7 +181,6 @@ public class BackwardSyncAlgSpec {
     voidCompletableFuture.get(800, TimeUnit.MILLISECONDS);
     assertThat(voidCompletableFuture).isCompleted();
 
-    verify(context.getSyncState()).unsubscribeTTDReached(88L);
     verify(context.getSyncState()).unsubscribeInitialConditionReached(99L);
   }
 
