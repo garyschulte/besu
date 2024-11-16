@@ -375,8 +375,7 @@ public class BesuController implements java.io.Closeable {
         if (syncMode == SyncMode.CHECKPOINT && isCheckpointPoSBlock(configOptions)) {
           return new MergeBesuControllerBuilder().genesisConfigFile(genesisConfigFile);
         } else {
-          return new MergeBesuControllerBuilder()
-              .genesisConfigFile(genesisConfigFile);
+          return new MergeBesuControllerBuilder().genesisConfigFile(genesisConfigFile);
         }
 
       } else return builder.genesisConfigFile(genesisConfigFile);

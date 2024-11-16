@@ -17,12 +17,13 @@ package org.hyperledger.besu.consensus.merge;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.core.Difficulty;
 import org.hyperledger.besu.ethereum.core.ProcessableBlockHeader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
-  public class TransitionUtils {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class TransitionUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(TransitionUtils.class);
 

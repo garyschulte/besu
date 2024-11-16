@@ -14,8 +14,11 @@
  */
 package org.hyperledger.besu;
 
-import com.google.common.collect.Streams;
-import org.apache.tuweni.bytes.Bytes;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import org.hyperledger.besu.cli.config.NetworkName;
 import org.hyperledger.besu.config.GenesisConfigFile;
 import org.hyperledger.besu.config.GenesisConfigOptions;
@@ -30,11 +33,6 @@ import org.hyperledger.besu.ethereum.forkid.ForkId;
 import org.hyperledger.besu.ethereum.forkid.ForkIdManager;
 import org.hyperledger.besu.ethereum.mainnet.DefaultProtocolSchedule;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collection;
 import java.util.List;
@@ -42,10 +40,13 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import com.google.common.collect.Streams;
+import org.apache.tuweni.bytes.Bytes;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 public class ForkIdsNetworkConfigTest {
@@ -165,16 +166,16 @@ public class ForkIdsNetworkConfigTest {
       final GenesisConfigFile genesisConfigFile) {
     final GenesisConfigOptions configOptions = genesisConfigFile.getConfigOptions();
     return new MilestoneStreamingProtocolSchedule(
-            (DefaultProtocolSchedule)
-                MergeProtocolSchedule.create(
-                    configOptions,
-                    false,
-                    MiningConfiguration.MINING_DISABLED,
-                    new BadBlockManager(),
-                    false,
-                    new NoOpMetricsSystem()));
+        (DefaultProtocolSchedule)
+            MergeProtocolSchedule.create(
+                configOptions,
+                false,
+                MiningConfiguration.MINING_DISABLED,
+                new BadBlockManager(),
+                false,
+                new NoOpMetricsSystem()));
   }
-  
+
   @Test
   void dryRunDetector() {
     assertThat(true)

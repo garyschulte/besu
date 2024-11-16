@@ -14,6 +14,8 @@
  */
 package org.hyperledger.besu.consensus.merge.headervalidationrules;
 
+import static org.hyperledger.besu.consensus.merge.TransitionUtils.isTerminalProofOfWorkBlock;
+
 import org.hyperledger.besu.consensus.merge.MergeContext;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
@@ -24,8 +26,6 @@ import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.hyperledger.besu.consensus.merge.TransitionUtils.isTerminalProofOfWorkBlock;
 
 /** The Merge consensus rule. */
 public abstract class MergeConsensusRule implements AttachedBlockHeaderValidationRule {

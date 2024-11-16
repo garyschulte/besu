@@ -25,7 +25,6 @@ import org.hyperledger.besu.config.GenesisConfigOptions;
 import org.hyperledger.besu.config.QbftConfigOptions;
 import org.hyperledger.besu.ethereum.eth.sync.SyncMode;
 
-import java.io.IOException;
 import java.util.Locale;
 import java.util.Map;
 import java.util.OptionalLong;

@@ -21,7 +21,6 @@ import org.hyperledger.besu.ethereum.eth.manager.EthPeer;
 
 import java.math.BigInteger;
 import java.util.Comparator;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
