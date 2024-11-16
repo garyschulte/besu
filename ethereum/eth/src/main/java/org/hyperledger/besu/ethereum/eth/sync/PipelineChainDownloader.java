@@ -113,8 +113,7 @@ public class PipelineChainDownloader implements ChainDownloader {
   private CompletionStage<Void> repeatUnlessDownloadComplete(
       @SuppressWarnings("unused") final Void result) {
     syncState.clearSyncTarget();
-    if (syncTargetManager.shouldContinueDownloading()
-        && !syncState.hasReachedTerminalDifficulty().orElse(Boolean.FALSE)) {
+    if (syncTargetManager.shouldContinueDownloading()) {
       return performDownload();
     } else {
       LOG.info("PipelineChain download complete");
@@ -157,7 +156,9 @@ public class PipelineChainDownloader implements ChainDownloader {
   }
 
   private synchronized CompletionStage<Void> startDownloadForSyncTarget(final SyncTarget target) {
-    if (cancelled.get() || syncState.hasReachedTerminalDifficulty().orElse(Boolean.FALSE)) {
+    // TODO: 500L from head is a generous distance to allow backward sync to kick in, need to ensure
+    //  backward sync and engine api honor this value when we are in full sync mode
+    if (cancelled.get() || syncState.isInSync(500L)) {
       return CompletableFuture.failedFuture(
           new CancellationException("Chain download was cancelled"));
     }

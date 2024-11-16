@@ -51,16 +51,4 @@ public class TransitionBestPeerComparatorTest {
     // a and b are equi-distant
     assertThat(comparator.compare(a, b)).isEqualTo(0);
   }
-
-  @Test
-  public void assertHandlesNewTTD() {
-    var comparator = new TransitionBestPeerComparator(Difficulty.of(5000));
-    when(a.chainState().getEstimatedTotalDifficulty()).thenReturn(Difficulty.of(5002));
-    when(b.chainState().getEstimatedTotalDifficulty()).thenReturn(Difficulty.of(4999));
-    assertThat(comparator.compare(a, b)).isEqualTo(-1);
-
-    // update TTD with actual value
-    comparator.mergeStateChanged(true, Optional.empty(), Optional.of(Difficulty.of(5002)));
-    assertThat(comparator.compare(a, b)).isEqualTo(1);
-  }
 }

@@ -291,12 +291,16 @@ public class BackwardSyncContext {
   }
 
   public boolean isReady() {
-    LOG.debug(
-        "checking if BWS is ready: ttd reached {}, initial sync done {}",
-        syncState.hasReachedTerminalDifficulty().orElse(Boolean.FALSE),
-        syncState.isInitialSyncPhaseDone());
-    return syncState.hasReachedTerminalDifficulty().orElse(Boolean.FALSE)
-        && syncState.isInitialSyncPhaseDone();
+
+    // TODO: confirm that isInitialSyncCompleted is sufficient here
+    return syncState.isInitialSyncPhaseDone();
+
+//    LOG.debug(
+//        "checking if BWS is ready: ttd reached {}, initial sync done {}",
+//        syncState.hasReachedTerminalDifficulty().orElse(Boolean.FALSE),
+//        syncState.isInitialSyncPhaseDone());
+//    return syncState.hasReachedTerminalDifficulty().orElse(Boolean.FALSE)
+//        && syncState.isInitialSyncPhaseDone();
   }
 
   public void subscribeBadChainListener(final BadChainListener badChainListener) {

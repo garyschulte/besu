@@ -80,7 +80,7 @@ public class EthProtocolManagerTestUtil {
       final WorldStateArchive worldStateArchive,
       final TransactionPool transactionPool,
       final EthProtocolConfiguration ethereumWireProtocolConfiguration,
-      final Optional<MergePeerFilter> mergePeerFilter) {
+      final Optional<PostMergePeerFilter> mergePeerFilter) {
 
     final EthPeers peers =
         new EthPeers(

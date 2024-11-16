@@ -286,7 +286,6 @@ public class DefaultSynchronizer implements Synchronizer, UnverifiedForkchoiceLi
     if (terminationCondition.shouldContinueDownload()) {
       return startFullSync();
     } else {
-      syncState.setReachedTerminalDifficulty(true);
       return CompletableFuture.completedFuture(null);
     }
   }
@@ -294,13 +293,7 @@ public class DefaultSynchronizer implements Synchronizer, UnverifiedForkchoiceLi
   private CompletableFuture<Void> startFullSync() {
     return fullSyncDownloader
         .map(FullSyncDownloader::start)
-        .orElse(CompletableFuture.completedFuture(null))
-        .thenRun(
-            () -> {
-              if (terminationCondition.shouldStopDownload()) {
-                syncState.setReachedTerminalDifficulty(true);
-              }
-            });
+        .orElse(CompletableFuture.completedFuture(null));
   }
 
   @Override

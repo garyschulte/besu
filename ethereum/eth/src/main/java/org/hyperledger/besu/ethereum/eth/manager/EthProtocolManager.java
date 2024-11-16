@@ -77,7 +77,7 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
   private final Blockchain blockchain;
   private final BlockBroadcaster blockBroadcaster;
   private final List<PeerValidator> peerValidators;
-  private final Optional<MergePeerFilter> mergePeerFilter;
+  private final Optional<PostMergePeerFilter> mergePeerFilter;
 
   public EthProtocolManager(
       final Blockchain blockchain,
@@ -89,7 +89,7 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
       final EthMessages ethMessages,
       final EthContext ethContext,
       final List<PeerValidator> peerValidators,
-      final Optional<MergePeerFilter> mergePeerFilter,
+      final Optional<PostMergePeerFilter> mergePeerFilter,
       final SynchronizerConfiguration synchronizerConfiguration,
       final EthScheduler scheduler,
       final ForkIdManager forkIdManager) {
@@ -138,7 +138,7 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
       final EthMessages ethMessages,
       final EthContext ethContext,
       final List<PeerValidator> peerValidators,
-      final Optional<MergePeerFilter> mergePeerFilter,
+      final Optional<PostMergePeerFilter> mergePeerFilter,
       final SynchronizerConfiguration synchronizerConfiguration,
       final EthScheduler scheduler) {
     this(

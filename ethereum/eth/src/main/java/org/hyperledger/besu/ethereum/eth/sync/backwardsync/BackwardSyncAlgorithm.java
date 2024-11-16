@@ -177,12 +177,11 @@ public class BackwardSyncAlgorithm implements BesuEvents.InitialSyncCompletionLi
 
   @VisibleForTesting
   protected CompletableFuture<Void> waitForReady() {
-    final long idTTD = context.getSyncState().subscribeTTDReached(reached -> countDownIfReady());
     final long idIS = context.getSyncState().subscribeCompletionReached(this);
-    return CompletableFuture.runAsync(() -> checkReadiness(idTTD, idIS));
+    return CompletableFuture.runAsync(() -> checkReadiness(idIS));
   }
 
-  private void checkReadiness(final long idTTD, final long idIS) {
+  private void checkReadiness(final long idIS) {
     try {
       if (!context.isReady()) {
         LOG.debug("Waiting for preconditions...");
@@ -200,7 +199,6 @@ public class BackwardSyncAlgorithm implements BesuEvents.InitialSyncCompletionLi
       throw new BackwardSyncException(
           "Error while waiting for at least one connected peer (" + e.getMessage() + ")", true);
     } finally {
-      context.getSyncState().unsubscribeTTDReached(idTTD);
       context.getSyncState().unsubscribeInitialConditionReached(idIS);
     }
   }

@@ -14,18 +14,12 @@
  */
 package org.hyperledger.besu;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
+import com.google.common.collect.Streams;
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.cli.config.NetworkName;
 import org.hyperledger.besu.config.GenesisConfigFile;
 import org.hyperledger.besu.config.GenesisConfigOptions;
 import org.hyperledger.besu.consensus.merge.MergeProtocolSchedule;
-import org.hyperledger.besu.consensus.merge.PostMergeContext;
-import org.hyperledger.besu.consensus.merge.TransitionProtocolSchedule;
-import org.hyperledger.besu.consensus.merge.TransitionUtils;
 import org.hyperledger.besu.ethereum.chain.BadBlockManager;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.chain.GenesisState;
@@ -35,8 +29,12 @@ import org.hyperledger.besu.ethereum.core.MiningConfiguration;
 import org.hyperledger.besu.ethereum.forkid.ForkId;
 import org.hyperledger.besu.ethereum.forkid.ForkIdManager;
 import org.hyperledger.besu.ethereum.mainnet.DefaultProtocolSchedule;
-import org.hyperledger.besu.ethereum.mainnet.MainnetProtocolSchedule;
 import org.hyperledger.besu.metrics.noop.NoOpMetricsSystem;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collection;
 import java.util.List;
@@ -44,13 +42,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.google.common.collect.Streams;
-import org.apache.tuweni.bytes.Bytes;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.junit.jupiter.MockitoExtension;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class ForkIdsNetworkConfigTest {
@@ -135,7 +130,7 @@ public class ForkIdsNetworkConfigTest {
   public void testForkId(final NetworkName chainName, final List<ForkId> expectedForkIds) {
     final GenesisConfigFile genesisConfigFile =
         GenesisConfigFile.fromResource(chainName.getGenesisFile());
-    final MilestoneStreamingTransitionProtocolSchedule schedule = createSchedule(genesisConfigFile);
+    final MilestoneStreamingProtocolSchedule schedule = createSchedule(genesisConfigFile);
     final GenesisState genesisState = GenesisState.fromConfig(genesisConfigFile, schedule);
     final Blockchain mockBlockchain = mock(Blockchain.class);
     final BlockHeader mockBlockHeader = mock(BlockHeader.class);
@@ -166,20 +161,10 @@ public class ForkIdsNetworkConfigTest {
     assertThat(actualForkIds).containsExactlyElementsOf(expectedForkIds);
   }
 
-  private static MilestoneStreamingTransitionProtocolSchedule createSchedule(
+  private static MilestoneStreamingProtocolSchedule createSchedule(
       final GenesisConfigFile genesisConfigFile) {
     final GenesisConfigOptions configOptions = genesisConfigFile.getConfigOptions();
-    MilestoneStreamingProtocolSchedule preMergeProtocolSchedule =
-        new MilestoneStreamingProtocolSchedule(
-            (DefaultProtocolSchedule)
-                MainnetProtocolSchedule.fromConfig(
-                    configOptions,
-                    MiningConfiguration.MINING_DISABLED,
-                    new BadBlockManager(),
-                    false,
-                    new NoOpMetricsSystem()));
-    MilestoneStreamingProtocolSchedule postMergeProtocolSchedule =
-        new MilestoneStreamingProtocolSchedule(
+    return new MilestoneStreamingProtocolSchedule(
             (DefaultProtocolSchedule)
                 MergeProtocolSchedule.create(
                     configOptions,
@@ -188,32 +173,8 @@ public class ForkIdsNetworkConfigTest {
                     new BadBlockManager(),
                     false,
                     new NoOpMetricsSystem()));
-    final MilestoneStreamingTransitionProtocolSchedule schedule =
-        new MilestoneStreamingTransitionProtocolSchedule(
-            preMergeProtocolSchedule, postMergeProtocolSchedule);
-    return schedule;
   }
-
-  public static class MilestoneStreamingTransitionProtocolSchedule
-      extends TransitionProtocolSchedule {
-
-    private final TransitionUtils<MilestoneStreamingProtocolSchedule> transitionUtils;
-
-    public MilestoneStreamingTransitionProtocolSchedule(
-        final MilestoneStreamingProtocolSchedule preMergeProtocolSchedule,
-        final MilestoneStreamingProtocolSchedule postMergeProtocolSchedule) {
-      super(preMergeProtocolSchedule, postMergeProtocolSchedule, PostMergeContext.get());
-      transitionUtils =
-          new TransitionUtils<>(
-              preMergeProtocolSchedule, postMergeProtocolSchedule, PostMergeContext.get());
-    }
-
-    public Stream<Long> streamMilestoneBlocks() {
-      return transitionUtils.dispatchFunctionAccordingToMergeState(
-          MilestoneStreamingProtocolSchedule::streamMilestoneBlocks);
-    }
-  }
-
+  
   @Test
   void dryRunDetector() {
     assertThat(true)

@@ -14,8 +14,6 @@
  */
 package org.hyperledger.besu.consensus.merge.headervalidationrules;
 
-import static org.hyperledger.besu.consensus.merge.TransitionUtils.isTerminalProofOfWorkBlock;
-
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.Difficulty;
@@ -42,8 +40,8 @@ public class NoNonceRule extends MergeConsensusRule {
       LOG.warn("unable to get total difficulty, parent {} not found", header.getParentHash());
       return false;
     }
-    if (super.shouldUsePostMergeRules(header, protocolContext)
-        && !isTerminalProofOfWorkBlock(header, protocolContext)) { // past TDD, invalid if has nonce
+    if (super.shouldUsePostMergeRules(header, protocolContext)) {
+      // past TDD, invalid if has nonce
       return header.getNonce() == 0L;
     } else {
       return true;

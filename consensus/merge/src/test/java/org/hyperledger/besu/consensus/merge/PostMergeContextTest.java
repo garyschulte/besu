@@ -51,57 +51,10 @@ public class PostMergeContextTest {
 
   private PostMergeContext postMergeContext;
 
-  private MergeStateChangeCollector mergeStateChangeCollector;
-
   @BeforeEach
   public void setUp() {
-    mergeStateChangeCollector = new MergeStateChangeCollector();
     postMergeContext = new PostMergeContext();
-    postMergeContext.observeNewIsPostMergeState(mergeStateChangeCollector);
     postMergeContext.setSyncState(mockSyncState);
-    postMergeContext.setTerminalTotalDifficulty(Difficulty.of(10L));
-  }
-
-  @Test
-  public void switchFromPoWToPoSStopSyncAndCallsSubscribers() {
-    when(mockSyncState.hasReachedTerminalDifficulty()).thenReturn(Optional.of(Boolean.TRUE));
-
-    postMergeContext.setIsPostMerge(Difficulty.of(10L));
-
-    verify(mockSyncState).setReachedTerminalDifficulty(true);
-    assertThat(postMergeContext.isPostMerge()).isTrue();
-    assertThat(postMergeContext.isSyncing()).isFalse();
-    assertThat(mergeStateChangeCollector.stateChanges).containsExactly(true);
-  }
-
-  @Test
-  public void setPrePoSStateNotStopSync() {
-    when(mockSyncState.hasReachedTerminalDifficulty()).thenReturn(Optional.of(Boolean.FALSE));
-
-    postMergeContext.setIsPostMerge(Difficulty.of(9L));
-
-    verify(mockSyncState, never()).setReachedTerminalDifficulty(false);
-    assertThat(postMergeContext.isPostMerge()).isFalse();
-    assertThat(postMergeContext.isSyncing()).isTrue();
-    assertThat(mergeStateChangeCollector.stateChanges).containsExactly(false);
-  }
-
-  @Test
-  public void setPostPoWDifficultyAfterFinalizedBlockDoesNothing() {
-    // first simulate a switch to PoS, and reset mocks and collectors
-    postMergeContext.setIsPostMerge(Difficulty.of(11L));
-    reset(mockSyncState);
-    mergeStateChangeCollector.reset();
-
-    // then perform the actual test
-    BlockHeader mockFinalizedHeader = mock(BlockHeader.class);
-    postMergeContext.setFinalized(mockFinalizedHeader);
-
-    postMergeContext.setIsPostMerge(Difficulty.of(19L));
-
-    verifyNoInteractions(mockSyncState);
-    assertThat(postMergeContext.isPostMerge()).isTrue();
-    assertThat(mergeStateChangeCollector.stateChanges).isEmpty();
   }
 
   @Test
@@ -213,13 +166,10 @@ public class PostMergeContextTest {
     // Assuming we're not in sync
     when(mockSyncState.isInSync()).thenReturn(Boolean.FALSE);
 
-    when(mockSyncState.hasReachedTerminalDifficulty()).thenReturn(Optional.empty());
     assertThat(postMergeContext.isSyncing()).isTrue();
 
-    when(mockSyncState.hasReachedTerminalDifficulty()).thenReturn(Optional.of(Boolean.FALSE));
     assertThat(postMergeContext.isSyncing()).isTrue();
 
-    when(mockSyncState.hasReachedTerminalDifficulty()).thenReturn(Optional.of(Boolean.TRUE));
     assertThat(postMergeContext.isSyncing()).isFalse();
 
     // if we're in sync reached ttd does not matter anymore
@@ -250,21 +200,5 @@ public class PostMergeContextTest {
     BlockWithReceipts mockBlockWithReceipts = mock(BlockWithReceipts.class);
     lenient().when(mockBlockWithReceipts.getBlock()).thenReturn(mockBlock);
     return mockBlockWithReceipts;
-  }
-
-  private static class MergeStateChangeCollector implements MergeStateHandler {
-    final List<Boolean> stateChanges = new ArrayList<>();
-
-    @Override
-    public void mergeStateChanged(
-        final boolean isPoS,
-        final Optional<Boolean> oldState,
-        final Optional<Difficulty> difficultyStoppedAt) {
-      stateChanges.add(isPoS);
-    }
-
-    public void reset() {
-      stateChanges.clear();
-    }
   }
 }

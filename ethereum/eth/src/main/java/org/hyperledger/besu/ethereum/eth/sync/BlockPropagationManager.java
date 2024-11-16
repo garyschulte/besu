@@ -128,7 +128,6 @@ public class BlockPropagationManager implements UnverifiedForkchoiceListener {
     this.blockBroadcaster = blockBroadcaster;
     this.syncState = syncState;
     this.pendingBlocksManager = pendingBlocksManager;
-    this.syncState.subscribeTTDReached(this::reactToTTDReachedEvent);
     this.getBlockTimeoutMillis =
         Duration.ofMillis(config.getPropagationManagerGetBlockTimeoutMillis());
     this.processingBlocksManager = processingBlocksManager;
@@ -716,14 +715,6 @@ public class BlockPropagationManager implements UnverifiedForkchoiceListener {
     return newBlockHashs.stream()
         .map(NewBlockHash::toString)
         .collect(Collectors.joining(", ", "[", "]"));
-  }
-
-  private void reactToTTDReachedEvent(final boolean ttdReached) {
-    if (started.get() && ttdReached) {
-      LOG.info("Block propagation was running, then ttd reached");
-    } else if (!started.get()) {
-      start();
-    }
   }
 
   @Override

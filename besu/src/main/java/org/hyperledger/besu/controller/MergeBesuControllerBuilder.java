@@ -33,7 +33,7 @@ import org.hyperledger.besu.ethereum.eth.manager.EthMessages;
 import org.hyperledger.besu.ethereum.eth.manager.EthPeers;
 import org.hyperledger.besu.ethereum.eth.manager.EthProtocolManager;
 import org.hyperledger.besu.ethereum.eth.manager.EthScheduler;
-import org.hyperledger.besu.ethereum.eth.manager.MergePeerFilter;
+import org.hyperledger.besu.ethereum.eth.manager.PostMergePeerFilter;
 import org.hyperledger.besu.ethereum.eth.peervalidation.PeerValidator;
 import org.hyperledger.besu.ethereum.eth.peervalidation.RequiredBlocksPeerValidator;
 import org.hyperledger.besu.ethereum.eth.sync.SynchronizerConfiguration;
@@ -98,24 +98,19 @@ public class MergeBesuControllerBuilder extends BesuControllerBuilder {
       final EthMessages ethMessages,
       final EthScheduler scheduler,
       final List<PeerValidator> peerValidators,
-      final Optional<MergePeerFilter> mergePeerFilter,
+      final Optional<PostMergePeerFilter> mergePeerFilter,
       final ForkIdManager forkIdManager) {
-
-    var mergeContext = protocolContext.getConsensusContext(MergeContext.class);
 
     var mergeBestPeerComparator =
         new TransitionBestPeerComparator(
             genesisConfigOptions.getTerminalTotalDifficulty().map(Difficulty::of).orElseThrow());
     ethPeers.setBestPeerComparator(mergeBestPeerComparator);
-    mergeContext.observeNewIsPostMergeState(mergeBestPeerComparator);
 
-    Optional<MergePeerFilter> filterToUse = Optional.of(new MergePeerFilter());
+    Optional<PostMergePeerFilter> filterToUse = Optional.of(new PostMergePeerFilter());
 
     if (mergePeerFilter.isPresent()) {
       filterToUse = mergePeerFilter;
     }
-    mergeContext.observeNewIsPostMergeState(filterToUse.get());
-    mergeContext.addNewUnverifiedForkchoiceListener(filterToUse.get());
 
     EthProtocolManager ethProtocolManager =
         super.createEthProtocolManager(
@@ -190,6 +185,7 @@ public class MergeBesuControllerBuilder extends BesuControllerBuilder {
 
     final OptionalLong terminalBlockNumber = genesisConfigOptions.getTerminalBlockNumber();
     final Optional<Hash> terminalBlockHash = genesisConfigOptions.getTerminalBlockHash();
+
     final boolean isPostMergeAtGenesis =
         genesisConfigOptions.getTerminalTotalDifficulty().isPresent()
             && genesisConfigOptions.getTerminalTotalDifficulty().get().isZero()
@@ -219,11 +215,6 @@ public class MergeBesuControllerBuilder extends BesuControllerBuilder {
       Optional<BlockHeader> termBlock = blockchain.getBlockHeader(terminalBlockNumber.getAsLong());
       mergeContext.setTerminalPoWBlock(termBlock);
     }
-    blockchain.observeBlockAdded(
-        blockAddedEvent ->
-            blockchain
-                .getTotalDifficultyByHash(blockAddedEvent.getBlock().getHeader().getHash())
-                .ifPresent(mergeContext::setIsPostMerge));
 
     return mergeContext;
   }

@@ -375,10 +375,7 @@ public class BesuController implements java.io.Closeable {
         if (syncMode == SyncMode.CHECKPOINT && isCheckpointPoSBlock(configOptions)) {
           return new MergeBesuControllerBuilder().genesisConfigFile(genesisConfigFile);
         } else {
-          // TODO this should be changed to vanilla MergeBesuControllerBuilder and the Transition*
-          // series of classes removed after we successfully transition to PoS
-          // https://github.com/hyperledger/besu/issues/2897
-          return new TransitionBesuControllerBuilder(builder, new MergeBesuControllerBuilder())
+          return new MergeBesuControllerBuilder()
               .genesisConfigFile(genesisConfigFile);
         }
 

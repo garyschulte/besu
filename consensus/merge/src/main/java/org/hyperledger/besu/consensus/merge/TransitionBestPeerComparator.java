@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
 /** The Transition best peer comparator. */
-public class TransitionBestPeerComparator implements Comparator<EthPeer>, MergeStateHandler {
+public class TransitionBestPeerComparator implements Comparator<EthPeer> {
 
   private static final AtomicReference<Difficulty> terminalTotalDifficulty =
       new AtomicReference<>();
@@ -61,16 +61,6 @@ public class TransitionBestPeerComparator implements Comparator<EthPeer>, MergeS
    */
   public TransitionBestPeerComparator(final Difficulty configuredTerminalTotalDifficulty) {
     terminalTotalDifficulty.set(configuredTerminalTotalDifficulty);
-  }
-
-  @Override
-  public void mergeStateChanged(
-      final boolean isPoS,
-      final Optional<Boolean> oldState,
-      final Optional<Difficulty> difficultyStoppedAt) {
-    if (isPoS && difficultyStoppedAt.isPresent()) {
-      terminalTotalDifficulty.set(difficultyStoppedAt.get());
-    }
   }
 
   @Override

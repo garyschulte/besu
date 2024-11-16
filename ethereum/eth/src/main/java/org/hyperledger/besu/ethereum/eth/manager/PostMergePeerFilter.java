@@ -14,9 +14,6 @@
  */
 package org.hyperledger.besu.ethereum.eth.manager;
 
-import org.hyperledger.besu.consensus.merge.ForkchoiceEvent;
-import org.hyperledger.besu.consensus.merge.MergeStateHandler;
-import org.hyperledger.besu.consensus.merge.UnverifiedForkchoiceListener;
 import org.hyperledger.besu.ethereum.core.Difficulty;
 import org.hyperledger.besu.ethereum.eth.messages.EthPV62;
 import org.hyperledger.besu.ethereum.eth.messages.StatusMessage;
@@ -30,12 +27,11 @@ import java.util.concurrent.locks.StampedLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MergePeerFilter implements MergeStateHandler, UnverifiedForkchoiceListener {
+public class PostMergePeerFilter {
 
-  private Optional<Difficulty> powTerminalDifficulty = Optional.of(Difficulty.MAX_VALUE);
+  private final Optional<Difficulty> powTerminalDifficulty = Optional.of(Difficulty.MAX_VALUE);
   private final StampedLock powTerminalDifficultyLock = new StampedLock();
-  private final AtomicBoolean finalized = new AtomicBoolean(false);
-  private static final Logger LOG = LoggerFactory.getLogger(MergePeerFilter.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PostMergePeerFilter.class);
 
   public boolean disconnectIfPoW(final StatusMessage status, final EthPeer peer) {
     long lockStamp = this.powTerminalDifficultyLock.readLock();
@@ -57,42 +53,12 @@ public class MergePeerFilter implements MergeStateHandler, UnverifiedForkchoiceL
 
   public boolean disconnectIfGossipingBlocks(final Message message, final EthPeer peer) {
     final int code = message.getData().getCode();
-    if (isFinalized() && (code == EthPV62.NEW_BLOCK || code == EthPV62.NEW_BLOCK_HASHES)) {
+    if (code == EthPV62.NEW_BLOCK || code == EthPV62.NEW_BLOCK_HASHES) {
       LOG.debug("disconnecting peer for sending new blocks after transition to PoS");
       peer.disconnect(DisconnectReason.SUBPROTOCOL_TRIGGERED_POW_BLOCKS);
       return true;
     } else {
       return false;
-    }
-  }
-
-  private boolean isFinalized() {
-    return this.finalized.get();
-  }
-
-  @Override
-  public void onNewUnverifiedForkchoice(final ForkchoiceEvent event) {
-    if (event
-        .hasValidFinalizedBlockHash()) { // forkchoices send finalized as 0 after ttd, but before an
-      // epoch is
-      // finalized
-      this.finalized.set(true);
-    }
-  }
-
-  @Override
-  public void mergeStateChanged(
-      final boolean isPoS,
-      final Optional<Boolean> oldState,
-      final Optional<Difficulty> difficultyStoppedAt) {
-    if (isPoS && difficultyStoppedAt.isPresent()) {
-      LOG.debug("terminal difficulty set to {}", difficultyStoppedAt.get().getValue());
-      long lockStamp = this.powTerminalDifficultyLock.writeLock();
-      try {
-        this.powTerminalDifficulty = difficultyStoppedAt;
-      } finally {
-        this.powTerminalDifficultyLock.unlockWrite(lockStamp);
-      }
     }
   }
 }

@@ -46,7 +46,7 @@ public class SyncState {
   private final AtomicLong inSyncSubscriberId = new AtomicLong();
   private final Map<Long, InSyncTracker> inSyncTrackers = new ConcurrentHashMap<>();
   private final Subscribers<SyncStatusListener> syncStatusListeners = Subscribers.create();
-  private final Subscribers<TTDReachedListener> ttdReachedListeners = Subscribers.create();
+//  private final Subscribers<TTDReachedListener> ttdReachedListeners = Subscribers.create();
 
   private final Subscribers<InitialSyncCompletionListener> completionListenerSubscribers =
       Subscribers.create();
@@ -55,7 +55,7 @@ public class SyncState {
   private volatile Optional<SyncTarget> syncTarget = Optional.empty();
   private Optional<WorldStateDownloadStatus> worldStateDownloadStatus = Optional.empty();
   private Optional<Long> newPeerListenerId;
-  private Optional<Boolean> reachedTerminalDifficulty = Optional.empty();
+//  private Optional<Boolean> reachedTerminalDifficulty = Optional.empty();
   private final Optional<Checkpoint> checkpoint;
   private volatile boolean isInitialSyncPhaseDone;
 
@@ -135,9 +135,9 @@ public class SyncState {
     return syncStatusListeners.subscribe(listener);
   }
 
-  public long subscribeTTDReached(final TTDReachedListener listener) {
-    return ttdReachedListeners.subscribe(listener);
-  }
+//  public long subscribeTTDReached(final TTDReachedListener listener) {
+//    return ttdReachedListeners.subscribe(listener);
+//  }
 
   public long subscribeCompletionReached(final InitialSyncCompletionListener listener) {
     return completionListenerSubscribers.subscribe(listener);
@@ -147,9 +147,9 @@ public class SyncState {
     return syncStatusListeners.unsubscribe(listenerId);
   }
 
-  public boolean unsubscribeTTDReached(final long listenerId) {
-    return ttdReachedListeners.unsubscribe(listenerId);
-  }
+//  public boolean unsubscribeTTDReached(final long listenerId) {
+//    return ttdReachedListeners.unsubscribe(listenerId);
+//  }
 
   public boolean unsubscribeInitialConditionReached(final long listenerId) {
     return completionListenerSubscribers.unsubscribe(listenerId);
@@ -181,17 +181,17 @@ public class SyncState {
         getLocalChainHead(), getSyncTargetChainHead(), getBestPeerChainHead(), syncTolerance);
   }
 
-  public void setReachedTerminalDifficulty(final boolean stoppedAtTerminalDifficulty) {
-    this.reachedTerminalDifficulty = Optional.of(stoppedAtTerminalDifficulty);
-    ttdReachedListeners.forEach(listener -> listener.onTTDReached(stoppedAtTerminalDifficulty));
-  }
-
-  public Optional<Boolean> hasReachedTerminalDifficulty() {
-    if (isInitialSyncPhaseDone) {
-      return reachedTerminalDifficulty;
-    }
-    return Optional.of(Boolean.FALSE);
-  }
+//  public void setReachedTerminalDifficulty(final boolean stoppedAtTerminalDifficulty) {
+//    this.reachedTerminalDifficulty = Optional.of(stoppedAtTerminalDifficulty);
+//    ttdReachedListeners.forEach(listener -> listener.onTTDReached(stoppedAtTerminalDifficulty));
+//  }
+//
+//  public Optional<Boolean> hasReachedTerminalDifficulty() {
+//    if (isInitialSyncPhaseDone) {
+//      return reachedTerminalDifficulty;
+//    }
+//    return Optional.of(Boolean.FALSE);
+//  }
 
   private boolean isInSync(
       final ChainHead localChain,
@@ -199,9 +199,9 @@ public class SyncState {
       final Optional<ChainHeadEstimate> bestPeerChain,
       final long syncTolerance) {
     return isInitialSyncPhaseDone
-        && reachedTerminalDifficulty.orElse(true)
-        // Sync target may be temporarily empty while we switch sync targets during a sync, so
-        // check both the sync target and our best peer to determine if we're in sync or not
+//        && reachedTerminalDifficulty.orElse(true)
+//        // Sync target may be temporarily empty while we switch sync targets during a sync, so
+//        // check both the sync target and our best peer to determine if we're in sync or not
         && isInSync(localChain, syncTargetChain, syncTolerance)
         && isInSync(localChain, bestPeerChain, syncTolerance);
   }

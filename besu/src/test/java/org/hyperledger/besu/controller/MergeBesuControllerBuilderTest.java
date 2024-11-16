@@ -260,7 +260,6 @@ public class MergeBesuControllerBuilderTest {
             .buildHeader();
 
     blockchain.appendBlock(new Block(terminal, BlockBody.empty()), Collections.emptyList());
-    assertThat(mergeContext.isPostMerge()).isTrue();
   }
 
   @Test

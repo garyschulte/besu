@@ -43,11 +43,6 @@ public class PostMergeContext implements MergeContext {
   private static final AtomicReference<PostMergeContext> singleton = new AtomicReference<>();
   private final AtomicReference<SyncState> syncState;
   private final AtomicReference<Difficulty> terminalTotalDifficulty;
-  // initial postMerge state is indeterminate until it is set:
-  private final AtomicReference<Optional<Boolean>> isPostMerge =
-      new AtomicReference<>(Optional.empty());
-  private final Subscribers<MergeStateHandler> newMergeStateCallbackSubscribers =
-      Subscribers.create();
   private final Subscribers<UnverifiedForkchoiceListener>
       newUnverifiedForkchoiceCallbackSubscribers = Subscribers.create();
 
@@ -105,34 +100,6 @@ public class PostMergeContext implements MergeContext {
   }
 
   @Override
-  public void setIsPostMerge(final Difficulty totalDifficulty) {
-    if (isPostMerge.get().orElse(Boolean.FALSE)) {
-      // if we have finalized, we never switch back to a pre-merge once we have transitioned
-      // post-TTD.
-      return;
-    }
-    final boolean newState = terminalTotalDifficulty.get().lessOrEqualThan(totalDifficulty);
-    final Optional<Boolean> oldState = isPostMerge.getAndSet(Optional.of(newState));
-
-    // if we are past TTD, set it:
-    if (newState)
-      Optional.ofNullable(syncState.get())
-          .ifPresent(ss -> ss.setReachedTerminalDifficulty(newState));
-
-    if (oldState.isEmpty() || oldState.get() != newState) {
-      newMergeStateCallbackSubscribers.forEach(
-          newMergeStateCallback ->
-              newMergeStateCallback.mergeStateChanged(
-                  newState, oldState, Optional.of(totalDifficulty)));
-    }
-  }
-
-  @Override
-  public boolean isPostMerge() {
-    return isPostMerge.get().orElse(Boolean.FALSE);
-  }
-
-  @Override
   public PostMergeContext setSyncState(final SyncState syncState) {
     this.syncState.set(syncState);
     return this;
@@ -140,17 +107,7 @@ public class PostMergeContext implements MergeContext {
 
   @Override
   public boolean isSyncing() {
-    return Optional.ofNullable(syncState.get()).map(s -> !s.isInSync()).orElse(Boolean.TRUE)
-        // this is necessary for when we do not have a sync target yet, like at startup.
-        // not being stopped at ttd implies we are syncing.
-        && Optional.ofNullable(syncState.get())
-            .map(s -> !(s.hasReachedTerminalDifficulty().orElse(Boolean.FALSE)))
-            .orElse(Boolean.TRUE);
-  }
-
-  @Override
-  public void observeNewIsPostMergeState(final MergeStateHandler mergeStateHandler) {
-    newMergeStateCallbackSubscribers.subscribe(mergeStateHandler);
+    return Optional.ofNullable(syncState.get()).map(s -> !s.isInSync()).orElse(Boolean.TRUE);
   }
 
   @Override
