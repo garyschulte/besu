@@ -141,7 +141,9 @@ public abstract class DiffBasedWorldState
       final DiffBasedWorldStateKeyValueStorage.Updater stateUpdater) {
     // calling calculateRootHash in order to update the state
     calculateRootHash(
-        worldStateConfig.isFrozen() ? Optional.empty() : Optional.of(stateUpdater), accumulator);
+        worldStateConfig.isFrozen() ? Optional.empty() : Optional.of(stateUpdater),
+        accumulator,
+        blockHeader);
     return blockHeader.getStateRoot();
   }
 
@@ -194,7 +196,8 @@ public abstract class DiffBasedWorldState
         calculatedRootHash =
             calculateRootHash(
                 worldStateConfig.isFrozen() ? Optional.empty() : Optional.of(stateUpdater),
-                accumulator);
+                accumulator,
+                blockHeader);
       } else {
         // if the trie is disabled, we cannot calculate the state root, so we directly use the root
         // of the block. It's important to understand that in all networks,
@@ -264,7 +267,12 @@ public abstract class DiffBasedWorldState
   @Override
   public Hash rootHash() {
     if (worldStateConfig.isFrozen() && accumulator.isAccumulatorStateChanged()) {
-      worldStateRootHash = calculateRootHash(Optional.empty(), accumulator.copy());
+      worldStateRootHash =
+          calculateRootHash(
+              Optional.empty(),
+              accumulator.copy(),
+              // hacky hack hack
+              worldStateRootHash);
       accumulator.resetAccumulatorStateChanged();
     }
     return Hash.wrap(worldStateRootHash);
@@ -380,7 +388,13 @@ public abstract class DiffBasedWorldState
 
   protected abstract Hash calculateRootHash(
       final Optional<DiffBasedWorldStateKeyValueStorage.Updater> maybeStateUpdater,
-      final DiffBasedWorldStateUpdateAccumulator<?> worldStateUpdater);
+      final DiffBasedWorldStateUpdateAccumulator<?> worldStateUpdater,
+      final BlockHeader hackyHeader);
+
+  protected abstract Hash calculateRootHash(
+      final Optional<DiffBasedWorldStateKeyValueStorage.Updater> maybeStateUpdater,
+      final DiffBasedWorldStateUpdateAccumulator<?> worldStateUpdater,
+      final Hash hackyStateRoot);
 
   protected abstract Hash getEmptyTrieHash();
 }
