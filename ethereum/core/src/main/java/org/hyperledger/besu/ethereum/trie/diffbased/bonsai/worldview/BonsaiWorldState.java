@@ -20,6 +20,7 @@ import static org.hyperledger.besu.ethereum.trie.diffbased.common.worldview.Diff
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.StorageSlotKey;
+import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.MutableWorldState;
 import org.hyperledger.besu.ethereum.trie.MerkleTrie;
 import org.hyperledger.besu.ethereum.trie.MerkleTrieException;
@@ -127,15 +128,29 @@ public class BonsaiWorldState extends DiffBasedWorldState {
   @Override
   protected Hash calculateRootHash(
       final Optional<DiffBasedWorldStateKeyValueStorage.Updater> maybeStateUpdater,
-      final DiffBasedWorldStateUpdateAccumulator<?> worldStateUpdater) {
+      final DiffBasedWorldStateUpdateAccumulator<?> worldStateUpdater,
+      final BlockHeader hackyHeader) {
     return internalCalculateRootHash(
         maybeStateUpdater.map(BonsaiWorldStateKeyValueStorage.Updater.class::cast),
-        (BonsaiWorldStateUpdateAccumulator) worldStateUpdater);
+        (BonsaiWorldStateUpdateAccumulator) worldStateUpdater,
+        Optional.ofNullable(hackyHeader).map(BlockHeader::getStateRoot));
+  }
+
+  @Override
+  protected Hash calculateRootHash(
+      final Optional<DiffBasedWorldStateKeyValueStorage.Updater> maybeStateUpdater,
+      final DiffBasedWorldStateUpdateAccumulator<?> worldStateUpdater,
+      final Hash hackyStateRoot) {
+    return internalCalculateRootHash(
+        maybeStateUpdater.map(BonsaiWorldStateKeyValueStorage.Updater.class::cast),
+        (BonsaiWorldStateUpdateAccumulator) worldStateUpdater,
+        Optional.ofNullable(hackyStateRoot));
   }
 
   private Hash internalCalculateRootHash(
       final Optional<BonsaiWorldStateKeyValueStorage.Updater> maybeStateUpdater,
-      final BonsaiWorldStateUpdateAccumulator worldStateUpdater) {
+      final BonsaiWorldStateUpdateAccumulator worldStateUpdater,
+      final Optional<Hash> hackyStateRoot) {
 
     clearStorage(maybeStateUpdater, worldStateUpdater);
 
@@ -149,42 +164,53 @@ public class BonsaiWorldState extends DiffBasedWorldState {
               .parallel(); // if we are not updating the state updater we can use parallel stream
     }
     storageStream.forEach(
-        addressMapEntry ->
-            updateAccountStorageState(maybeStateUpdater, worldStateUpdater, addressMapEntry));
+        addressMapEntry -> {
+          if (hackyStateRoot.isPresent()) {
+            hackyNoStateRootUpdateAccountStorageState(
+                maybeStateUpdater, worldStateUpdater, addressMapEntry);
+          } else {
+            updateAccountStorageState(maybeStateUpdater, worldStateUpdater, addressMapEntry);
+          }
+        });
 
     // Third update the code.  This has the side effect of ensuring a code hash is calculated.
     updateCode(maybeStateUpdater, worldStateUpdater);
 
-    // next walk the account trie
-    final MerkleTrie<Bytes, Bytes> accountTrie =
-        createTrie(
-            (location, hash) ->
-                bonsaiCachedMerkleTrieLoader.getAccountStateTrieNode(
-                    getWorldStateStorage(), location, hash),
-            worldStateRootHash);
+    if (hackyStateRoot.isPresent()) {
+      // don't calculate root hash, dgaf
+      updateTheAccounts(maybeStateUpdater, worldStateUpdater, Optional.empty());
+      return hackyStateRoot.get();
+    } else {
+      // next walk the account trie
+      final MerkleTrie<Bytes, Bytes> accountTrie =
+          createTrie(
+              (location, hash) ->
+                  bonsaiCachedMerkleTrieLoader.getAccountStateTrieNode(
+                      getWorldStateStorage(), location, hash),
+              worldStateRootHash);
 
-    // for manicured tries and composting, collect branches here (not implemented)
-    updateTheAccounts(maybeStateUpdater, worldStateUpdater, accountTrie);
-
-    // TODO write to a cache and then generate a layer update from that and the
-    // DB tx updates.  Right now it is just DB updates.
-    maybeStateUpdater.ifPresent(
-        bonsaiUpdater ->
-            accountTrie.commit(
-                (location, hash, value) ->
-                    writeTrieNode(
-                        TRIE_BRANCH_STORAGE,
-                        bonsaiUpdater.getWorldStateTransaction(),
-                        location,
-                        value)));
-    final Bytes32 rootHash = accountTrie.getRootHash();
-    return Hash.wrap(rootHash);
+      // for manicured tries and composting, collect branches here (not implemented)
+      updateTheAccounts(maybeStateUpdater, worldStateUpdater, Optional.of(accountTrie));
+      // TODO write to a cache and then generate a layer update from that and the
+      // DB tx updates.  Right now it is just DB updates.
+      maybeStateUpdater.ifPresent(
+          bonsaiUpdater ->
+              accountTrie.commit(
+                  (location, hash, value) ->
+                      writeTrieNode(
+                          TRIE_BRANCH_STORAGE,
+                          bonsaiUpdater.getWorldStateTransaction(),
+                          location,
+                          value)));
+      final Bytes32 rootHash = accountTrie.getRootHash();
+      return Hash.wrap(rootHash);
+    }
   }
 
   private void updateTheAccounts(
       final Optional<BonsaiWorldStateKeyValueStorage.Updater> maybeStateUpdater,
       final BonsaiWorldStateUpdateAccumulator worldStateUpdater,
-      final MerkleTrie<Bytes, Bytes> accountTrie) {
+      final Optional<MerkleTrie<Bytes, Bytes>> accountTrie) {
     for (final Map.Entry<Address, DiffBasedValue<BonsaiAccount>> accountUpdate :
         worldStateUpdater.getAccountsToUpdate().entrySet()) {
       final Address accountKey = accountUpdate.getKey();
@@ -192,7 +218,7 @@ public class BonsaiWorldState extends DiffBasedWorldState {
       final BonsaiAccount updatedAccount = bonsaiValue.getUpdated();
       try {
         if (updatedAccount == null) {
-          accountTrie.remove(accountKey.addressHash());
+          accountTrie.ifPresent(trie -> trie.remove(accountKey.addressHash()));
           maybeStateUpdater.ifPresent(
               bonsaiUpdater -> bonsaiUpdater.removeAccountInfoState(accountKey.addressHash()));
         } else {
@@ -200,7 +226,7 @@ public class BonsaiWorldState extends DiffBasedWorldState {
           final Bytes accountValue = updatedAccount.serializeAccount();
           maybeStateUpdater.ifPresent(
               bonsaiUpdater -> bonsaiUpdater.putAccountInfoState(addressHash, accountValue));
-          accountTrie.put(addressHash, accountValue);
+          accountTrie.ifPresent(trie -> trie.put(addressHash, accountValue));
         }
       } catch (MerkleTrieException e) {
         // need to throw to trigger the heal
@@ -243,6 +269,43 @@ public class BonsaiWorldState extends DiffBasedWorldState {
     return value == null || value.isEmpty();
   }
 
+  private void hackyNoStateRootUpdateAccountStorageState(
+      final Optional<BonsaiWorldStateKeyValueStorage.Updater> maybeStateUpdater,
+      final BonsaiWorldStateUpdateAccumulator worldStateUpdater,
+      final Map.Entry<Address, StorageConsumingMap<StorageSlotKey, DiffBasedValue<UInt256>>>
+          storageAccountUpdate) {
+    final Address updatedAddress = storageAccountUpdate.getKey();
+    final Hash updatedAddressHash = updatedAddress.addressHash();
+    if (worldStateUpdater.getAccountsToUpdate().containsKey(updatedAddress)) {
+
+      // for manicured tries and composting, collect branches here (not implemented)
+      for (final Map.Entry<StorageSlotKey, DiffBasedValue<UInt256>> storageUpdate :
+          storageAccountUpdate.getValue().entrySet()) {
+        final Hash slotHash = storageUpdate.getKey().getSlotHash();
+        final UInt256 updatedStorage = storageUpdate.getValue().getUpdated();
+        try {
+          if (updatedStorage == null || updatedStorage.equals(UInt256.ZERO)) {
+            maybeStateUpdater.ifPresent(
+                bonsaiUpdater ->
+                    bonsaiUpdater.removeStorageValueBySlotHash(updatedAddressHash, slotHash));
+          } else {
+            maybeStateUpdater.ifPresent(
+                bonsaiUpdater ->
+                    bonsaiUpdater.putStorageValueBySlotHash(
+                        updatedAddressHash, slotHash, updatedStorage));
+          }
+        } catch (MerkleTrieException e) {
+          // need to throw to trigger the heal
+          throw new MerkleTrieException(
+              e.getMessage(),
+              Optional.of(Address.wrap(updatedAddress)),
+              e.getHash(),
+              e.getLocation());
+        }
+      }
+    }
+  }
+
   private void updateAccountStorageState(
       final Optional<BonsaiWorldStateKeyValueStorage.Updater> maybeStateUpdater,
       final BonsaiWorldStateUpdateAccumulator worldStateUpdater,
@@ -251,6 +314,7 @@ public class BonsaiWorldState extends DiffBasedWorldState {
     final Address updatedAddress = storageAccountUpdate.getKey();
     final Hash updatedAddressHash = updatedAddress.addressHash();
     if (worldStateUpdater.getAccountsToUpdate().containsKey(updatedAddress)) {
+
       final DiffBasedValue<BonsaiAccount> accountValue =
           worldStateUpdater.getAccountsToUpdate().get(updatedAddress);
       final BonsaiAccount accountOriginal = accountValue.getPrior();
@@ -259,6 +323,7 @@ public class BonsaiWorldState extends DiffBasedWorldState {
                   || worldStateUpdater.getStorageToClear().contains(updatedAddress))
               ? Hash.EMPTY_TRIE_HASH
               : accountOriginal.getStorageRoot();
+
       final MerkleTrie<Bytes, Bytes> storageTrie =
           createTrie(
               (location, key) ->
@@ -372,7 +437,8 @@ public class BonsaiWorldState extends DiffBasedWorldState {
         Optional.of(
             new BonsaiWorldStateKeyValueStorage.Updater(
                 noOpSegmentedTx, noOpTx, worldStateKeyValueStorage.getFlatDbStrategy())),
-        accumulator.copy());
+        accumulator.copy(),
+        this.worldStateRootHash);
   }
 
   @Override
