@@ -26,6 +26,7 @@ import javax.annotation.Nonnull;
 
 import com.sun.jna.ptr.IntByReference;
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.nativelib.gnark.LibGnarkEIP2537;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +51,8 @@ public abstract class AbstractAltBnPrecompiledContract extends AbstractPrecompil
   public static boolean maybeEnableNative() {
     try {
       useNative = LibGnarkEIP196.ENABLED;
+      // set parallel 1 for testing
+      LibGnarkEIP2537.setDegreeOfMSMParallelism(1);
     } catch (UnsatisfiedLinkError | NoClassDefFoundError ule) {
       LOG.info("altbn128 native precompile not available: {}", ule.getMessage());
       useNative = false;
