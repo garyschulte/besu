@@ -47,7 +47,7 @@ public class Benchmarks {
 
   static final Random random = new Random();
 
-  static final long GAS_PER_SECOND_STANDARD = 35_000_000L;
+  static final long GAS_PER_SECOND_STANDARD = 80_000_000L;
 
   static final int HASH_WARMUP = 1_000_000;
   static final int HASH_ITERATIONS = 10_000;
