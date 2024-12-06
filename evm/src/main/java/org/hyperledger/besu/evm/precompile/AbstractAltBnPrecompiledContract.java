@@ -51,8 +51,6 @@ public abstract class AbstractAltBnPrecompiledContract extends AbstractPrecompil
   public static boolean maybeEnableNative() {
     try {
       useNative = LibGnarkEIP196.ENABLED;
-      // set parallel 1 for testing
-      LibGnarkEIP2537.setDegreeOfMSMParallelism(1);
     } catch (UnsatisfiedLinkError | NoClassDefFoundError ule) {
       LOG.info("altbn128 native precompile not available: {}", ule.getMessage());
       useNative = false;

@@ -33,6 +33,11 @@ public abstract class AbstractBLS12PrecompiledContract implements PrecompiledCon
 
   private static final Logger LOG = LoggerFactory.getLogger(AbstractBLS12PrecompiledContract.class);
 
+  static {
+    // set parallel 1 for testing.  Remove this for prod code (or set a rational limit)
+    LibGnarkEIP2537.setDegreeOfMSMParallelism(1);
+  }
+
   /** The Discount table. */
   static final int[] DISCOUNT_TABLE =
       new int[] {
@@ -57,7 +62,7 @@ public abstract class AbstractBLS12PrecompiledContract implements PrecompiledCon
       };
 
   /** The Max discount. */
-  static final int MAX_DISCOUNT = 174;
+  static final int MAX_DISCOUNT = 435;
 
   private final String name;
   private final byte operationId;

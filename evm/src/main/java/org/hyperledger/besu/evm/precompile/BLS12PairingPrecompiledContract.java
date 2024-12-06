@@ -34,6 +34,6 @@ public class BLS12PairingPrecompiledContract extends AbstractBLS12PrecompiledCon
   @Override
   public long gasRequirement(final Bytes input) {
     final int k = input.size() / PARAMETER_LENGTH;
-    return 32_587L * k + 37_698L;
+    return 51_600L * k + 78_000L;
   }
 }
