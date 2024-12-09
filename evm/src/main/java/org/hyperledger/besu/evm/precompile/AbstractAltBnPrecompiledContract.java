@@ -26,7 +26,6 @@ import javax.annotation.Nonnull;
 
 import com.sun.jna.ptr.IntByReference;
 import org.apache.tuweni.bytes.Bytes;
-import org.hyperledger.besu.nativelib.gnark.LibGnarkEIP2537;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
