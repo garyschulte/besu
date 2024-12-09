@@ -33,6 +33,6 @@ public class BLS12MapFp2ToG2PrecompiledContract extends AbstractBLS12Precompiled
 
   @Override
   public long gasRequirement(final Bytes input) {
-    return 15_000L;
+    return 17_000L;
   }
 }
