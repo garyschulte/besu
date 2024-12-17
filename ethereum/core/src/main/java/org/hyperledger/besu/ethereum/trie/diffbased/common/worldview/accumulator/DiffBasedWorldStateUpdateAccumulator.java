@@ -157,7 +157,7 @@ public abstract class DiffBasedWorldStateUpdateAccumulator<ACCOUNT extends DiffB
                   });
             });
     storageToClear.addAll(source.storageToClear);
-    storageKeyHashLookup.putAll(source.storageKeyHashLookup);
+    slotCache.putAll(source.slotCache.asMap());
 
     this.isAccumulatorStateChanged = true;
   }
@@ -216,7 +216,7 @@ public abstract class DiffBasedWorldStateUpdateAccumulator<ACCOUNT extends DiffB
                             uInt256DiffBasedValue.getPrior(), uInt256DiffBasedValue.getPrior()));
                   });
             });
-    storageKeyHashLookup.putAll(source.storageKeyHashLookup);
+    slotCache.putAll(source.slotCache.asMap());
     this.isAccumulatorStateChanged = true;
   }
 
