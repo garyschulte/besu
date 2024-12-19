@@ -21,6 +21,7 @@ import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.MutableWorldState;
 import org.hyperledger.besu.ethereum.core.Transaction;
+import org.hyperledger.besu.ethereum.core.TransactionReceipt;
 import org.hyperledger.besu.ethereum.core.Withdrawal;
 import org.hyperledger.besu.ethereum.mainnet.AbstractBlockProcessor.PreprocessingFunction.NoPreprocessing;
 import org.hyperledger.besu.ethereum.mainnet.BlockProcessor;
@@ -31,7 +32,10 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpecBuilder;
 import org.hyperledger.besu.ethereum.privacy.storage.PrivateMetadataUpdater;
 import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
+import org.hyperledger.besu.ethereum.trie.diffbased.bonsai.BonsaiAccount;
+import org.hyperledger.besu.ethereum.trie.diffbased.bonsai.worldview.BonsaiWorldStateUpdateAccumulator;
 import org.hyperledger.besu.ethereum.trie.diffbased.common.worldview.DiffBasedWorldState;
+import org.hyperledger.besu.ethereum.trie.diffbased.common.worldview.accumulator.DiffBasedWorldStateUpdateAccumulator;
 import org.hyperledger.besu.evm.operation.BlockHashOperation;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
 import org.hyperledger.besu.metrics.BesuMetricCategory;
@@ -154,21 +158,34 @@ public class MainnetParallelBlockProcessor extends MainnetBlockProcessor {
             maybeWithdrawals,
             privateMetadataUpdater,
             new ParallelTransactionPreprocessing());
+
+    BonsaiWorldStateUpdateAccumulator updater = (BonsaiWorldStateUpdateAccumulator) worldState.updater();
+    DiffBasedWorldStateUpdateAccumulator<BonsaiAccount> copy = updater.copy();
+    updater.reset();
     if (blockProcessingResult.isFailed()) {
       // Fallback to non-parallel processing if there is a block processing exception .
       LOG.warn(
           "Block processing failed. Falling back to non-parallel processing for block #{} ({})",
           blockHeader.getNumber(),
           blockHeader.getBlockHash());
-      return super.processBlock(
-          blockchain,
-          worldState,
-          blockHeader,
-          transactions,
-          ommers,
-          maybeWithdrawals,
-          privateMetadataUpdater,
-          new NoPreprocessing());
+      final BlockProcessingResult blockProcessingResult1 = super.processBlock(
+              blockchain,
+              worldState,
+              blockHeader,
+              transactions,
+              ommers,
+              maybeWithdrawals,
+              privateMetadataUpdater,
+              new NoPreprocessing());
+      BonsaiWorldStateUpdateAccumulator updater2 = (BonsaiWorldStateUpdateAccumulator) worldState.updater();
+      updater2.compareAccumulators(updater2, copy);
+      updater2.reset();
+      int i =0;
+        for (TransactionReceipt transactionReceipt : blockProcessingResult.getReceipts()) {
+            System.out.println("trx " + i + " " + transactionReceipt.isParal);
+            i++;
+        }
+        return blockProcessingResult1;
     }
     return blockProcessingResult;
   }

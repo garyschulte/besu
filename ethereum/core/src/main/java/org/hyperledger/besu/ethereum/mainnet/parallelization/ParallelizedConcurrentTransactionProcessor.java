@@ -254,6 +254,7 @@ public class ParallelizedConcurrentTransactionProcessor {
         if (confirmedParallelizedTransactionCounter.isPresent()) {
           confirmedParallelizedTransactionCounter.get().inc();
           transactionProcessingResult.setIsProcessedInParallel(Optional.of(Boolean.TRUE));
+          transactionProcessingResult.accumulator = transactionAccumulator;
         }
         return Optional.of(transactionProcessingResult);
       } else {

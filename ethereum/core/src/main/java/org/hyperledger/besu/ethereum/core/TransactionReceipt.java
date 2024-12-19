@@ -57,6 +57,7 @@ public class TransactionReceipt implements org.hyperledger.besu.plugin.data.Tran
   private final int status;
   private final TransactionReceiptType transactionReceiptType;
   private final Optional<Bytes> revertReason;
+  public boolean isParal=false;
 
   /**
    * Creates an instance of a state root-encoded transaction receipt.

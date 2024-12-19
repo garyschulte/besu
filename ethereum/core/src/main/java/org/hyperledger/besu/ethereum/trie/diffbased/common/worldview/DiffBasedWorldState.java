@@ -208,11 +208,11 @@ public abstract class DiffBasedWorldState
     } finally {
       if (success) {
         stateUpdater.commit();
-        accumulator.reset();
+        //accumulator.reset();
         saveTrieLog.run();
       } else {
         stateUpdater.rollback();
-        accumulator.reset();
+        //accumulator.reset();
       }
     }
   }

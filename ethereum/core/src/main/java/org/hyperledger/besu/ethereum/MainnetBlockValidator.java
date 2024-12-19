@@ -196,6 +196,7 @@ public class MainnetBlockValidator implements BlockValidator {
       return retval;
     } catch (Exception ex) {
       // Wrap checked autocloseable exception from try-with-resources
+      LOG.error("Error in block validation: ", ex);
       throw new RuntimeException(ex);
     }
   }

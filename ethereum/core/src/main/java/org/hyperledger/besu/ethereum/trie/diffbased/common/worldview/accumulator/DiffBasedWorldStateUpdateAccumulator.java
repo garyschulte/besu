@@ -21,6 +21,7 @@ import org.hyperledger.besu.datatypes.StorageSlotKey;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.rlp.RLP;
 import org.hyperledger.besu.ethereum.trie.MerkleTrieException;
+import org.hyperledger.besu.ethereum.trie.diffbased.bonsai.BonsaiAccount;
 import org.hyperledger.besu.ethereum.trie.diffbased.common.DiffBasedAccount;
 import org.hyperledger.besu.ethereum.trie.diffbased.common.DiffBasedValue;
 import org.hyperledger.besu.ethereum.trie.diffbased.common.storage.DiffBasedWorldStateKeyValueStorage;
@@ -39,6 +40,7 @@ import org.hyperledger.besu.plugin.services.trielogs.TrieLogAccumulator;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -98,6 +100,18 @@ public abstract class DiffBasedWorldStateUpdateAccumulator<ACCOUNT extends DiffB
     updatedAccounts.putAll(source.updatedAccounts);
     deletedAccounts.addAll(source.deletedAccounts);
     this.isAccumulatorStateChanged = true;
+  }
+
+  public static void main(final String[] args) {
+    Map<Integer,Integer> d = new HashMap<>();
+    d.put(1,1);
+    Map<Integer,Integer> e = new HashMap<>();
+    e.putAll(d);
+    d.clear();
+    e.forEach((integer, integer2) -> {
+      System.out.println(integer+ " "+integer2);
+    });
+
   }
 
   /**
@@ -893,6 +907,172 @@ public abstract class DiffBasedWorldStateUpdateAccumulator<ACCOUNT extends DiffB
       storageKeyHashLookup.put(slotKey, hash);
     }
     return hash;
+  }
+
+  public boolean compareAccumulators(
+          final DiffBasedWorldStateUpdateAccumulator<ACCOUNT> accumulator1,
+          final DiffBasedWorldStateUpdateAccumulator<ACCOUNT> accumulator2) {
+
+    boolean areIdentical = true;
+
+    // Compare accountsToUpdate keys
+    Set<Address> keys1 = accumulator1.getAccountsToUpdate().keySet();
+    Set<Address> keys2 = accumulator2.getAccountsToUpdate().keySet();
+
+    if (!keys1.equals(keys2)) {
+      LOG.warn("Mismatch in keys for accountsToUpdate: keys1={}, keys2={}", keys1, keys2);
+      areIdentical = false;
+    }
+
+    for (Address address : keys1) {
+      DiffBasedValue<ACCOUNT> value1 = accumulator1.getAccountsToUpdate().get(address);
+      DiffBasedValue<ACCOUNT> value2 = accumulator2.getAccountsToUpdate().get(address);
+
+      if (!compareAccounts(value1, value2, address)) {
+        areIdentical = false;
+      }
+    }
+
+    // Compare codeToUpdate keys
+    Set<Address> codeKeys1 = accumulator1.getCodeToUpdate().keySet();
+    Set<Address> codeKeys2 = accumulator2.getCodeToUpdate().keySet();
+
+    if (!codeKeys1.equals(codeKeys2)) {
+      LOG.warn("Mismatch in keys for codeToUpdate: keys1={}, keys2={}", codeKeys1, codeKeys2);
+      areIdentical = false;
+    }
+
+    for (Address address : codeKeys1) {
+      DiffBasedValue<Bytes> value1 = accumulator1.getCodeToUpdate().get(address);
+      DiffBasedValue<Bytes> value2 = accumulator2.getCodeToUpdate().get(address);
+
+      if (!compareDiffBasedValues(value1, value2, "codeToUpdate", address)) {
+        areIdentical = false;
+      }
+    }
+
+    // Compare storageToUpdate keys
+    Set<Address> storageKeys1 = accumulator1.getStorageToUpdate().keySet();
+    Set<Address> storageKeys2 = accumulator2.getStorageToUpdate().keySet();
+
+    if (!storageKeys1.equals(storageKeys2)) {
+      LOG.warn("Mismatch in keys for storageToUpdate: keys1={}, keys2={}", storageKeys1, storageKeys2);
+      areIdentical = false;
+    }
+
+    for (Address address : storageKeys1) {
+      Map<StorageSlotKey, DiffBasedValue<UInt256>> storage1 = accumulator1.getStorageToUpdate().get(address);
+      Map<StorageSlotKey, DiffBasedValue<UInt256>> storage2 = accumulator2.getStorageToUpdate().get(address);
+
+      if (storage1 == null || storage2 == null || !storage1.keySet().equals(storage2.keySet())) {
+        LOG.warn("Mismatch in storage keys for address: {} keys1={}, keys2={}", address, storage1 == null ? null : storage1.keySet(), storage2 == null ? null : storage2.keySet());
+        areIdentical = false;
+      }
+
+      Set<StorageSlotKey> slots = new HashSet<>();
+      slots.addAll(storage1.keySet());
+      slots.addAll(storage2.keySet());
+      for (StorageSlotKey key : slots) {
+        DiffBasedValue<UInt256> value1 = storage1.get(key);
+        DiffBasedValue<UInt256> value2 = storage2.get(key);
+
+        if (!compareDiffBasedValues(value1, value2, "storageToUpdate", key)) {
+          areIdentical = false;
+        }
+      }
+    }
+
+    // Compare storageToClear
+    Set<Address> storageToClear1 = accumulator1.getStorageToClear();
+    Set<Address> storageToClear2 = accumulator2.getStorageToClear();
+
+    if (!storageToClear1.equals(storageToClear2)) {
+      LOG.warn("Mismatch in storageToClear: storageToClear1={}, storageToClear2={}", storageToClear1, storageToClear2);
+      areIdentical = false;
+    }
+
+    return areIdentical;
+  }
+
+
+  private <T> boolean compareDiffBasedValues(final DiffBasedValue<T> value1,final  DiffBasedValue<T> value2, final String section, final Object identifier) {
+      if (value1 == null && value2 == null) {
+        return true;
+      }
+
+      if (value1 == null || value2 == null) {
+        LOG.warn("Mismatch in {} for identifier {}: one is null.", section, identifier);
+        return false;
+      }
+
+      boolean isPriorEqual = Objects.equals(value1.getPrior(), value2.getPrior());
+      boolean isUpdatedEqual = Objects.equals(value1.getUpdated(), value2.getUpdated());
+
+      if (!isPriorEqual || !isUpdatedEqual) {
+        LOG.warn("Mismatch in {} for identifier {}: prior or updated values differ. Value1={}, Value2={}.",
+                section, identifier, value1, value2);
+        return false;
+      }
+
+      return true;
+    }
+
+  private boolean compareAccounts(final DiffBasedValue<ACCOUNT> account1, final DiffBasedValue<ACCOUNT> account2, final Address address) {
+    if (account1 == null && account2 == null) {
+      return true;
+    }
+
+    if (account1 == null || account2 == null) {
+      LOG.warn("Mismatch in accounts for address {}: one is null.", address);
+      return false;
+    }
+
+    ACCOUNT prior1 = account1.getPrior();
+    ACCOUNT prior2 = account2.getPrior();
+    ACCOUNT updated1 = account1.getUpdated();
+    ACCOUNT updated2 = account2.getUpdated();
+
+    // Compare prior values
+    if (prior1 != null && prior2 != null) {
+      if (prior1.getNonce() != prior2.getNonce()) {
+        LOG.warn("Mismatch in prior account nonce for address {}: prior1={}, prior2={}.", address, prior1.getNonce(), prior2.getNonce());
+        return false;
+      }
+      if (!prior1.getBalance().equals(prior2.getBalance())) {
+        LOG.warn("Mismatch in prior account balance for address {}: prior1={}, prior2={}.", address, prior1.getBalance(), prior2.getBalance());
+        return false;
+      }
+      if (!prior1.getStorageRoot().equals(prior2.getStorageRoot())) {
+        LOG.warn("Mismatch in prior account storage root for address {}: prior1={}, prior2={}.", address, prior1.getStorageRoot(), prior2.getStorageRoot());
+        return false;
+      }
+      if (!prior1.getCodeHash().equals(prior2.getCodeHash())) {
+        LOG.warn("Mismatch in prior account code hash for address {}: prior1={}, prior2={}.", address, prior1.getCodeHash(), prior2.getCodeHash());
+        return false;
+      }
+    }
+
+    // Compare updated values
+    if (updated1 != null && updated2 != null) {
+      if (updated1.getNonce() != updated2.getNonce()) {
+        LOG.warn("Mismatch in updated account nonce for address {}: updated1={}, updated2={}.", address, updated1.getNonce(), updated2.getNonce());
+        return false;
+      }
+      if (!updated1.getBalance().equals(updated2.getBalance())) {
+        LOG.warn("Mismatch in updated account balance for address {}: updated1={}, updated2={}.", address, updated1.getBalance(), updated2.getBalance());
+        return false;
+      }
+      if (!updated1.getStorageRoot().equals(updated2.getStorageRoot())) {
+        LOG.warn("Mismatch in updated account storage root for address {}: updated1={}, updated2={}.", address, updated1.getStorageRoot(), updated2.getStorageRoot());
+        return false;
+      }
+      if (!updated1.getCodeHash().equals(updated2.getCodeHash())) {
+        LOG.warn("Mismatch in updated account code hash for address {}: updated1={}, updated2={}.", address, updated1.getCodeHash(), updated2.getCodeHash());
+        return false;
+      }
+    }
+
+    return true;
   }
 
   public abstract DiffBasedWorldStateUpdateAccumulator<ACCOUNT> copy();

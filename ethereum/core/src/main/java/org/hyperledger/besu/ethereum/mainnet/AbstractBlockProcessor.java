@@ -207,8 +207,10 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
       if (!parallelizedTxFound
           && transactionProcessingResult.getIsProcessedInParallel().isPresent()) {
         parallelizedTxFound = true;
+        transactionReceipt.isParal = true;
         nbParallelTx = 1;
       } else if (transactionProcessingResult.getIsProcessedInParallel().isPresent()) {
+        transactionReceipt.isParal = true;
         nbParallelTx++;
       }
     }
