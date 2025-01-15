@@ -23,6 +23,7 @@ import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 
@@ -83,8 +84,10 @@ public class BLAKE2BFPrecompileContract extends AbstractPrecompiledContract {
           null, Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR));
     }
     PrecompileInputResultTuple res = null;
+    Integer cacheKey = null;
     if (enableResultCaching) {
-      res = blakeCache.getIfPresent(input.hashCode());
+      cacheKey = Arrays.hashCode(input.toArrayUnsafe());
+      res = blakeCache.getIfPresent(cacheKey);
       if (res != null) {
         if (res.cachedInput().equals(input)) {
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.HIT));
@@ -101,7 +104,7 @@ public class BLAKE2BFPrecompileContract extends AbstractPrecompiledContract {
         new PrecompileInputResultTuple(
             input, PrecompileContractResult.success(Hash.blake2bf(input)));
 
-    if (enableResultCaching) {
+    if (cacheKey != null) {
       blakeCache.put(input.hashCode(), res);
     }
 

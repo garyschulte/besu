@@ -81,9 +81,11 @@ public class AltBN128AddPrecompiledContract extends AbstractAltBnPrecompiledCont
       final Bytes input, @Nonnull final MessageFrame messageFrame) {
 
     PrecompileInputResultTuple res;
+    Integer cacheKey = null;
 
     if (enableResultCaching) {
-      res = bnAddCache.getIfPresent(input.hashCode());
+      cacheKey = Arrays.hashCode(input.toArrayUnsafe());
+      res = bnAddCache.getIfPresent(cacheKey);
       if (res != null) {
         if (res.cachedInput().equals(input)) {
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.HIT));
@@ -100,8 +102,8 @@ public class AltBN128AddPrecompiledContract extends AbstractAltBnPrecompiledCont
     } else {
       res = new PrecompileInputResultTuple(input, computeDefault(input));
     }
-    if (enableResultCaching) {
-      bnAddCache.put(input.hashCode(), res);
+    if (cacheKey != null) {
+      bnAddCache.put(cacheKey, res);
     }
     return res.cachedResult();
   }

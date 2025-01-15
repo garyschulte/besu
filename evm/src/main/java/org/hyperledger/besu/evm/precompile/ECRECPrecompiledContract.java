@@ -99,7 +99,9 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
         } else {
           LOG.info(
               "false positive ecrec {}, cached hash {}, input hash: {}",
-              input.getClass().getSimpleName(), res.cachedInput().hashCode(), h.hashCode());
+              input.getClass().getSimpleName(),
+              res.cachedInput().hashCode(),
+              h.hashCode());
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.FALSE_POSITIVE));
         }
       } else {
@@ -126,7 +128,9 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
       final Optional<SECPPublicKey> recovered =
           signatureAlgorithm.recoverPublicKeyFromSignature(h, signature);
       if (recovered.isEmpty()) {
-        res = new PrecompileInputResultTuple(nonMutatedInput, PrecompileContractResult.success(Bytes.EMPTY));
+        res =
+            new PrecompileInputResultTuple(
+                nonMutatedInput, PrecompileContractResult.success(Bytes.EMPTY));
         ecrecCache.put(nonMutatedInput.hashCode(), res);
         return res.cachedResult();
       }
@@ -134,7 +138,8 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
       final Bytes32 hashed = Hash.keccak256(recovered.get().getEncodedBytes());
       final MutableBytes32 result = MutableBytes32.create();
       hashed.slice(12).copyTo(result, 12);
-      res = new PrecompileInputResultTuple(nonMutatedInput, PrecompileContractResult.success(result));
+      res =
+          new PrecompileInputResultTuple(nonMutatedInput, PrecompileContractResult.success(result));
       if (enableResultCaching) {
         ecrecCache.put(nonMutatedInput.hashCode(), res);
       }
