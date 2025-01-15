@@ -108,8 +108,10 @@ public class AltBN128PairingPrecompiledContract extends AbstractAltBnPrecompiled
           null, Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR));
     }
     PrecompileInputResultTuple res;
+    Integer cacheKey = null;
     if (enableResultCaching) {
-      res = bnPairingCache.getIfPresent(input.hashCode());
+      cacheKey = Arrays.hashCode(input.toArrayUnsafe());
+      res = bnPairingCache.getIfPresent(cacheKey);
       if (res != null) {
         if (res.cachedInput().equals(input)) {
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.HIT));
@@ -126,8 +128,8 @@ public class AltBN128PairingPrecompiledContract extends AbstractAltBnPrecompiled
     } else {
       res = new PrecompileInputResultTuple(input, computeDefault(input));
     }
-    if (enableResultCaching) {
-      bnPairingCache.put(input.hashCode(), res);
+    if (cacheKey != null) {
+      bnPairingCache.put(cacheKey, res);
     }
 
     return res.cachedResult();
