@@ -32,10 +32,13 @@ import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.bytes.MutableBytes;
 import org.apache.tuweni.bytes.MutableBytes32;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** The ECREC precompiled contract. */
 public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
 
+  private static final Logger LOG = LoggerFactory.getLogger(ECRECPrecompiledContract.class);
   private static final int V_BASE = 27;
   final SignatureAlgorithm signatureAlgorithm;
   public static final String PRECOMPILE_NAME = "ECREC";
@@ -92,6 +95,9 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.HIT));
           return res.cachedResult();
         } else {
+          LOG.info(
+              "false positive ecrec {}, cached hash {}, input hash: {}",
+              input.getClass().getSimpleName(), res.cachedInput().hashCode(), input.hashCode());
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.FALSE_POSITIVE));
         }
       } else {
