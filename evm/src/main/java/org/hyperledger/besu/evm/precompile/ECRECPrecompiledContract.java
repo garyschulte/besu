@@ -76,6 +76,7 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
   public PrecompileContractResult computePrecompile(
       final Bytes input, @Nonnull final MessageFrame messageFrame) {
     final int size = input.size();
+    final Bytes nonMutatedInput = input.copy();
     final Bytes d = size >= 128 ? input : Bytes.wrap(input, MutableBytes.create(128 - size));
     final Bytes32 h = Bytes32.wrap(d, 0);
     // Note that the Yellow Paper defines v as the next 32 bytes (so 32..63). Yet, v is a simple
@@ -90,8 +91,9 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
 
     if (enableResultCaching) {
       res = ecrecCache.getIfPresent(h.hashCode());
+
       if (res != null) {
-        if (res.cachedInput().equals(input)) {
+        if (res.cachedInput().equals(nonMutatedInput)) {
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.HIT));
           return res.cachedResult();
         } else {
@@ -124,7 +126,7 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
       final Optional<SECPPublicKey> recovered =
           signatureAlgorithm.recoverPublicKeyFromSignature(h, signature);
       if (recovered.isEmpty()) {
-        res = new PrecompileInputResultTuple(input, PrecompileContractResult.success(Bytes.EMPTY));
+        res = new PrecompileInputResultTuple(nonMutatedInput, PrecompileContractResult.success(Bytes.EMPTY));
         ecrecCache.put(h.hashCode(), res);
         return res.cachedResult();
       }
@@ -132,7 +134,7 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
       final Bytes32 hashed = Hash.keccak256(recovered.get().getEncodedBytes());
       final MutableBytes32 result = MutableBytes32.create();
       hashed.slice(12).copyTo(result, 12);
-      res = new PrecompileInputResultTuple(input, PrecompileContractResult.success(result));
+      res = new PrecompileInputResultTuple(nonMutatedInput, PrecompileContractResult.success(result));
       if (enableResultCaching) {
         ecrecCache.put(h.hashCode(), res);
       }
