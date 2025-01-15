@@ -90,7 +90,7 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
     PrecompileInputResultTuple res;
 
     if (enableResultCaching) {
-      res = ecrecCache.getIfPresent(h.hashCode());
+      res = ecrecCache.getIfPresent(nonMutatedInput.hashCode());
 
       if (res != null) {
         if (res.cachedInput().equals(nonMutatedInput)) {
@@ -127,7 +127,7 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
           signatureAlgorithm.recoverPublicKeyFromSignature(h, signature);
       if (recovered.isEmpty()) {
         res = new PrecompileInputResultTuple(nonMutatedInput, PrecompileContractResult.success(Bytes.EMPTY));
-        ecrecCache.put(h.hashCode(), res);
+        ecrecCache.put(nonMutatedInput.hashCode(), res);
         return res.cachedResult();
       }
 
@@ -136,7 +136,7 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
       hashed.slice(12).copyTo(result, 12);
       res = new PrecompileInputResultTuple(nonMutatedInput, PrecompileContractResult.success(result));
       if (enableResultCaching) {
-        ecrecCache.put(h.hashCode(), res);
+        ecrecCache.put(nonMutatedInput.hashCode(), res);
       }
       return res.cachedResult();
     } catch (final IllegalArgumentException e) {
