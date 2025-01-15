@@ -91,7 +91,7 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
     if (enableResultCaching) {
       res = ecrecCache.getIfPresent(h.hashCode());
       if (res != null) {
-        if (res.cachedInput().equals(h)) {
+        if (res.cachedInput().equals(input)) {
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.HIT));
           return res.cachedResult();
         } else {
