@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 public class BLAKE2BFPrecompileContract extends AbstractPrecompiledContract {
 
   private static final Logger LOG = LoggerFactory.getLogger(BLAKE2BFPrecompileContract.class);
+  public static final String PRECOMPILE_NAME = "BLAKE2f";
   private static final Cache<Integer, PrecompileInputResultTuple> blakeCache =
       Caffeine.newBuilder().maximumSize(1000).build();
 
@@ -46,7 +47,7 @@ public class BLAKE2BFPrecompileContract extends AbstractPrecompiledContract {
    * @param gasCalculator the gas calculator
    */
   public BLAKE2BFPrecompileContract(final GasCalculator gasCalculator) {
-    super("BLAKE2f", gasCalculator);
+    super(PRECOMPILE_NAME, gasCalculator);
   }
 
   @Override
@@ -84,8 +85,15 @@ public class BLAKE2BFPrecompileContract extends AbstractPrecompiledContract {
     PrecompileInputResultTuple res = null;
     if (enableResultCaching) {
       res = blakeCache.getIfPresent(input.hashCode());
-      if (res != null && res.cachedInput().equals(input)) {
-        return res.cachedResult();
+      if (res != null) {
+        if (res.cachedInput().equals(input)) {
+          cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.HIT));
+          return res.cachedResult();
+        } else {
+          cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.FALSE_POSITIVE));
+        }
+      } else {
+        cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.MISS));
       }
     }
 
