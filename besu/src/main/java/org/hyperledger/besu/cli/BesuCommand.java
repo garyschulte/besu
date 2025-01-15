@@ -976,6 +976,27 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
 
       configureNativeLibs();
       AbstractPrecompiledContract.setPrecompileCaching(enablePrecompileCaching);
+
+      // TODO: I don't particularly like this implementation, it is a Proof-of-concept for metrics
+      //      logging that does not leak metrics system or plugin-api into the evm component
+      if (enablePrecompileCaching) {
+        // set a metric logger
+        final var precompileCounter =
+            getMetricsSystem()
+                .createLabelledCounter(
+                    BesuMetricCategory.BLOCK_PROCESSING,
+                    "precompile_cache",
+                    "precompile cache labeled counter",
+                    "precompile_name",
+                    "event");
+
+        // set a cache event consumer which logs a metrics event
+        AbstractPrecompiledContract.setCacheEventConsumer(
+            cacheEvent ->
+                precompileCounter
+                    .labels(cacheEvent.precompile(), cacheEvent.cacheMetric().name())
+                    .inc());
+      }
       besuController = buildController();
 
       besuPluginContext.beforeExternalServices();

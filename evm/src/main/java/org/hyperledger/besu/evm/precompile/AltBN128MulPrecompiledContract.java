@@ -35,6 +35,7 @@ import org.apache.tuweni.bytes.MutableBytes;
 public class AltBN128MulPrecompiledContract extends AbstractAltBnPrecompiledContract {
 
   private static final int PARAMETER_LENGTH = 96;
+  public static final String PRECOMPILE_NAME = "AltBN128Mul";
 
   private static final BigInteger MAX_N =
       new BigInteger(
@@ -47,7 +48,7 @@ public class AltBN128MulPrecompiledContract extends AbstractAltBnPrecompiledCont
 
   private AltBN128MulPrecompiledContract(final GasCalculator gasCalculator, final long gasCost) {
     super(
-        "AltBN128Mul",
+        PRECOMPILE_NAME,
         gasCalculator,
         LibGnarkEIP196.EIP196_MUL_OPERATION_RAW_VALUE,
         PARAMETER_LENGTH);
@@ -87,8 +88,15 @@ public class AltBN128MulPrecompiledContract extends AbstractAltBnPrecompiledCont
     PrecompileInputResultTuple res;
     if (enableResultCaching) {
       res = bnMulCache.getIfPresent(input.hashCode());
-      if (res != null && res.cachedInput().equals(input)) {
-        return res.cachedResult();
+      if (res != null) {
+        if (res.cachedInput().equals(input)) {
+          cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.HIT));
+          return res.cachedResult();
+        } else {
+          cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.FALSE_POSITIVE));
+        }
+      } else {
+        cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.MISS));
       }
     }
 

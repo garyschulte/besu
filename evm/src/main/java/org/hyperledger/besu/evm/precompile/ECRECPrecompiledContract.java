@@ -38,6 +38,7 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
 
   private static final int V_BASE = 27;
   final SignatureAlgorithm signatureAlgorithm;
+  public static final String PRECOMPILE_NAME = "ECREC";
   private static final Cache<Integer, PrecompileInputResultTuple> ecrecCache =
       Caffeine.newBuilder().maximumSize(1000).build();
 
@@ -58,7 +59,7 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
    */
   public ECRECPrecompiledContract(
       final GasCalculator gasCalculator, final SignatureAlgorithm signatureAlgorithm) {
-    super("ECREC", gasCalculator);
+    super(PRECOMPILE_NAME, gasCalculator);
     this.signatureAlgorithm = signatureAlgorithm;
   }
 
@@ -86,8 +87,15 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
 
     if (enableResultCaching) {
       res = ecrecCache.getIfPresent(input.hashCode());
-      if (res != null && res.cachedInput().equals(input)) {
-        return res.cachedResult();
+      if (res != null) {
+        if (res.cachedInput().equals(input)) {
+          cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.HIT));
+          return res.cachedResult();
+        } else {
+          cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.FALSE_POSITIVE));
+        }
+      } else {
+        cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.MISS));
       }
     }
 
