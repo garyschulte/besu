@@ -89,15 +89,15 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
     PrecompileInputResultTuple res;
 
     if (enableResultCaching) {
-      res = ecrecCache.getIfPresent(input.hashCode());
+      res = ecrecCache.getIfPresent(h.hashCode());
       if (res != null) {
-        if (res.cachedInput().equals(input)) {
+        if (res.cachedInput().equals(h)) {
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.HIT));
           return res.cachedResult();
         } else {
           LOG.info(
               "false positive ecrec {}, cached hash {}, input hash: {}",
-              input.getClass().getSimpleName(), res.cachedInput().hashCode(), input.hashCode());
+              input.getClass().getSimpleName(), res.cachedInput().hashCode(), h.hashCode());
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.FALSE_POSITIVE));
         }
       } else {
@@ -125,7 +125,7 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
           signatureAlgorithm.recoverPublicKeyFromSignature(h, signature);
       if (recovered.isEmpty()) {
         res = new PrecompileInputResultTuple(input, PrecompileContractResult.success(Bytes.EMPTY));
-        ecrecCache.put(input.hashCode(), res);
+        ecrecCache.put(h.hashCode(), res);
         return res.cachedResult();
       }
 
