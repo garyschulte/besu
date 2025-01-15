@@ -134,7 +134,7 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
       hashed.slice(12).copyTo(result, 12);
       res = new PrecompileInputResultTuple(input, PrecompileContractResult.success(result));
       if (enableResultCaching) {
-        ecrecCache.put(input.hashCode(), res);
+        ecrecCache.put(h.hashCode(), res);
       }
       return res.cachedResult();
     } catch (final IllegalArgumentException e) {
