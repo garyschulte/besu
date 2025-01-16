@@ -565,6 +565,7 @@ public class MainnetTransactionProcessor {
       if (clearEmptyAccounts) {
         evmWorldUpdater.clearAccountsThatAreEmpty();
       }
+      System.err.printf("\t\t\tpost %s elapsed: %d ns\n", txid, sw.elapsed(TimeUnit.NANOSECONDS));
 
       if (initialFrame.getState() == MessageFrame.State.COMPLETED_SUCCESS) {
         return TransactionProcessingResult.successful(
@@ -586,7 +587,6 @@ public class MainnetTransactionProcessor {
               transaction.getHash(),
               initialFrame.getRevertReason().get());
         }
-        System.err.printf("\t\t\tpost %s elapsed: %d ns\n", txid, sw.elapsed(TimeUnit.NANOSECONDS));
         return TransactionProcessingResult.failed(
             gasUsedByTransaction, refundedGas, validationResult, initialFrame.getRevertReason());
       }
