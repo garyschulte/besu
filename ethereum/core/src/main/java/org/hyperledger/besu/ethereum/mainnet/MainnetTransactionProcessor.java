@@ -49,7 +49,9 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
@@ -288,6 +290,8 @@ public class MainnetTransactionProcessor {
       final Wei blobGasPrice) {
     final EVMWorldUpdater evmWorldUpdater = new EVMWorldUpdater(worldState, gasCalculator);
     try {
+      final Stopwatch sw = Stopwatch.createStarted();
+      final String txid = transaction.getHash().toShortLogString();
       final var transactionValidator = transactionValidatorFactory.get();
       LOG.trace("Starting execution of {}", transaction);
       ValidationResult<TransactionInvalidReason> validationResult =
@@ -313,7 +317,8 @@ public class MainnetTransactionProcessor {
         LOG.debug("Invalid transaction: {}", validationResult.getErrorMessage());
         return TransactionProcessingResult.invalid(validationResult);
       }
-
+      System.err.printf(
+          "\t\t\tvalidation spent on %s: %d ns\n", txid, sw.elapsed(TimeUnit.NANOSECONDS));
       operationTracer.tracePrepareTransaction(evmWorldUpdater, transaction);
 
       final Set<Address> warmAddressList = new BytesTrieSet<>(Address.SIZE);
@@ -497,7 +502,7 @@ public class MainnetTransactionProcessor {
             transaction.getGasLimit() - initialFrame.getRemainingGas(),
             gasAvailable - initialFrame.getRemainingGas());
       }
-
+      sw.reset().start();
       // Refund the sender by what we should and pay the miner fee (note that we're doing them one
       // after the other so that if it is the same account somehow, we end up with the right result)
       final long selfDestructRefund =
@@ -581,6 +586,7 @@ public class MainnetTransactionProcessor {
               transaction.getHash(),
               initialFrame.getRevertReason().get());
         }
+        System.err.printf("\t\t\tpost %s elapsed: %d ns\n", txid, sw.elapsed(TimeUnit.NANOSECONDS));
         return TransactionProcessingResult.failed(
             gasUsedByTransaction, refundedGas, validationResult, initialFrame.getRevertReason());
       }

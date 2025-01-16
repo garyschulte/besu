@@ -126,7 +126,7 @@ public class ParallelizedConcurrentTransactionProcessor {
                 blobGasPrice,
                 privateMetadataUpdater);
             System.err.printf(
-                "\t\tparallel tx %s completed in %dns\n",
+                "\t\tparallel tx %s completed in %d ns\n",
                 shortId, sw.elapsed(TimeUnit.NANOSECONDS));
           },
           executor);
