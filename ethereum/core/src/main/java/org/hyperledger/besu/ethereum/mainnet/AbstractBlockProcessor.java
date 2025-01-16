@@ -186,7 +186,7 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
               i,
               blockHashLookup);
       System.err.printf(
-          "\tserial tx inclusion: %s elapsed: %d", shortId, sw.elapsed(TimeUnit.NANOSECONDS));
+          "\tserial tx inclusion: %s elapsed: %d\n", shortId, sw.elapsed(TimeUnit.NANOSECONDS));
       if (transactionProcessingResult.isInvalid()) {
         String errorMessage =
             MessageFormat.format(
