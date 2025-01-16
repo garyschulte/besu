@@ -48,7 +48,9 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Stopwatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -168,6 +170,8 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
         return new BlockProcessingResult(Optional.empty(), "provided gas insufficient");
       }
       final WorldUpdater blockUpdater = worldState.updater();
+      final Stopwatch sw = Stopwatch.createStarted();
+      final String shortId = transaction.getHash().toShortLogString();
 
       TransactionProcessingResult transactionProcessingResult =
           getTransactionProcessingResult(
@@ -181,6 +185,8 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
               transaction,
               i,
               blockHashLookup);
+      System.err.printf(
+          "\tserial tx inclusion: %s elapsed: %d", shortId, sw.elapsed(TimeUnit.NANOSECONDS));
       if (transactionProcessingResult.isInvalid()) {
         String errorMessage =
             MessageFormat.format(

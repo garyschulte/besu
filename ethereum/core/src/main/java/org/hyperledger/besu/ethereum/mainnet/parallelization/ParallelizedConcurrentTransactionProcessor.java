@@ -39,8 +39,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Stopwatch;
 
 /**
  * Optimizes transaction processing by executing transactions in parallel within a given block.
@@ -111,16 +113,22 @@ public class ParallelizedConcurrentTransactionProcessor {
        * All transactions are executed in the background by copying the world state of the block on which the transactions need to be executed, ensuring that each one has its own accumulator.
        */
       CompletableFuture.runAsync(
-          () ->
-              runTransaction(
-                  protocolContext,
-                  blockHeader,
-                  transactionLocation,
-                  transaction,
-                  miningBeneficiary,
-                  blockHashLookup,
-                  blobGasPrice,
-                  privateMetadataUpdater),
+          () -> {
+            final Stopwatch sw = Stopwatch.createStarted();
+            final String shortId = transaction.getHash().toShortLogString();
+            runTransaction(
+                protocolContext,
+                blockHeader,
+                transactionLocation,
+                transaction,
+                miningBeneficiary,
+                blockHashLookup,
+                blobGasPrice,
+                privateMetadataUpdater);
+            System.err.printf(
+                "\t\tparallel tx %s completed in %dns\n",
+                shortId, sw.elapsed(TimeUnit.NANOSECONDS));
+          },
           executor);
     }
   }
