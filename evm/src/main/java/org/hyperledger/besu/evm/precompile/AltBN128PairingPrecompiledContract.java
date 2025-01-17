@@ -30,10 +30,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.base.Stopwatch;
 import org.apache.tuweni.bytes.Bytes;
 
 /** The AltBN128Pairing precompiled contract. */
@@ -107,14 +109,20 @@ public class AltBN128PairingPrecompiledContract extends AbstractAltBnPrecompiled
       return PrecompileContractResult.halt(
           null, Optional.of(ExceptionalHaltReason.PRECOMPILE_ERROR));
     }
+    final Stopwatch sw = Stopwatch.createStarted();
     PrecompileInputResultTuple res;
     Integer cacheKey = null;
+    Stopwatch sw2 = Stopwatch.createStarted();
+
     if (enableResultCaching) {
       cacheKey = Arrays.hashCode(input.toArrayUnsafe());
       res = bnPairingCache.getIfPresent(cacheKey);
       if (res != null) {
         if (res.cachedInput().equals(input)) {
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.HIT));
+          System.err.printf(
+              "\taltbn128pairing cache hit, lookup time %d ns, total time %d ns\n",
+              sw2.elapsed(TimeUnit.NANOSECONDS), sw.elapsed(TimeUnit.NANOSECONDS));
           return res.cachedResult();
         } else {
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.FALSE_POSITIVE));
@@ -123,13 +131,20 @@ public class AltBN128PairingPrecompiledContract extends AbstractAltBnPrecompiled
         cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.MISS));
       }
     }
+    System.err.printf(
+        "\taltbn128pairing cache miss, lookup time %d ns\n", sw2.elapsed(TimeUnit.NANOSECONDS));
+
     if (useNative) {
       res = new PrecompileInputResultTuple(input, computeNative(input, messageFrame));
     } else {
       res = new PrecompileInputResultTuple(input, computeDefault(input));
     }
     if (cacheKey != null) {
+      sw2.reset();
       bnPairingCache.put(cacheKey, res);
+      System.err.printf(
+          "\taltbn128pairing caching result, put time %d ns, total time %d ns\n",
+          sw2.elapsed(TimeUnit.NANOSECONDS), sw.elapsed(TimeUnit.NANOSECONDS));
     }
 
     return res.cachedResult();

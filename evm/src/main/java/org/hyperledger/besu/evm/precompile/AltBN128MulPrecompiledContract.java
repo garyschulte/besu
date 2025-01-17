@@ -24,10 +24,12 @@ import org.hyperledger.besu.nativelib.gnark.LibGnarkEIP196;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.base.Stopwatch;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.MutableBytes;
 
@@ -84,15 +86,25 @@ public class AltBN128MulPrecompiledContract extends AbstractAltBnPrecompiledCont
   @Override
   public PrecompileContractResult computePrecompile(
       final Bytes input, @Nonnull final MessageFrame messageFrame) {
+    final Stopwatch sw = Stopwatch.createStarted();
+
+    if (input.size() >= 64 && input.slice(0, 64).equals(POINT_AT_INFINITY)) {
+      return new PrecompileContractResult(
+          POINT_AT_INFINITY, false, MessageFrame.State.COMPLETED_SUCCESS, Optional.empty());
+    }
 
     PrecompileInputResultTuple res;
     Integer cacheKey = null;
+    Stopwatch sw2 = Stopwatch.createStarted();
     if (enableResultCaching) {
       cacheKey = Arrays.hashCode(input.toArrayUnsafe());
       res = bnMulCache.getIfPresent(cacheKey);
       if (res != null) {
         if (res.cachedInput().equals(input)) {
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.HIT));
+          System.err.printf(
+              "\taltbn128mul cache hit, lookup time %d ns, total time %d ns\n",
+              sw2.elapsed(TimeUnit.NANOSECONDS), sw.elapsed(TimeUnit.NANOSECONDS));
           return res.cachedResult();
         } else {
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.FALSE_POSITIVE));
@@ -101,11 +113,8 @@ public class AltBN128MulPrecompiledContract extends AbstractAltBnPrecompiledCont
         cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.MISS));
       }
     }
-
-    if (input.size() >= 64 && input.slice(0, 64).equals(POINT_AT_INFINITY)) {
-      return new PrecompileContractResult(
-          POINT_AT_INFINITY, false, MessageFrame.State.COMPLETED_SUCCESS, Optional.empty());
-    }
+    System.err.printf(
+        "\taltbn128mul cache miss, lookup time %d ns\n", sw2.elapsed(TimeUnit.NANOSECONDS));
 
     if (useNative) {
       res = new PrecompileInputResultTuple(input, computeNative(input, messageFrame));
@@ -113,7 +122,11 @@ public class AltBN128MulPrecompiledContract extends AbstractAltBnPrecompiledCont
       res = new PrecompileInputResultTuple(input, computeDefault(input));
     }
     if (cacheKey != null) {
+      sw2.reset();
       bnMulCache.put(cacheKey, res);
+      System.err.printf(
+          "\taltbn128mul caching result, put time %d ns, total time %d ns\n",
+          sw2.elapsed(TimeUnit.NANOSECONDS), sw.elapsed(TimeUnit.NANOSECONDS));
     }
     return res.cachedResult();
   }

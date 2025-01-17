@@ -24,10 +24,12 @@ import org.hyperledger.besu.nativelib.gnark.LibGnarkEIP196;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.base.Stopwatch;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.MutableBytes;
 
@@ -79,16 +81,21 @@ public class AltBN128AddPrecompiledContract extends AbstractAltBnPrecompiledCont
   @Override
   public PrecompileContractResult computePrecompile(
       final Bytes input, @Nonnull final MessageFrame messageFrame) {
+    final Stopwatch sw = Stopwatch.createStarted();
 
     PrecompileInputResultTuple res;
     Integer cacheKey = null;
 
+    Stopwatch sw2 = Stopwatch.createStarted();
     if (enableResultCaching) {
       cacheKey = Arrays.hashCode(input.toArrayUnsafe());
       res = bnAddCache.getIfPresent(cacheKey);
       if (res != null) {
         if (res.cachedInput().equals(input)) {
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.HIT));
+          System.err.printf(
+              "\taltbn128add cache hit, lookup time %d ns, total time %d ns\n",
+              sw2.elapsed(TimeUnit.NANOSECONDS), sw.elapsed(TimeUnit.NANOSECONDS));
           return res.cachedResult();
         } else {
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.FALSE_POSITIVE));
@@ -97,13 +104,20 @@ public class AltBN128AddPrecompiledContract extends AbstractAltBnPrecompiledCont
         cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.MISS));
       }
     }
+    System.err.printf(
+        "\taltbn128add cache miss, lookup time %d ns\n", sw2.elapsed(TimeUnit.NANOSECONDS));
+
     if (useNative) {
       res = new PrecompileInputResultTuple(input, computeNative(input, messageFrame));
     } else {
       res = new PrecompileInputResultTuple(input, computeDefault(input));
     }
     if (cacheKey != null) {
+      sw2.reset();
       bnAddCache.put(cacheKey, res);
+      System.err.printf(
+          "\taltbn128add caching result, put time %d ns, total time %d ns\n",
+          sw2.elapsed(TimeUnit.NANOSECONDS), sw.elapsed(TimeUnit.NANOSECONDS));
     }
     return res.cachedResult();
   }
