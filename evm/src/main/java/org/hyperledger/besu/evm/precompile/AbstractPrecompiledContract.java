@@ -16,6 +16,8 @@ package org.hyperledger.besu.evm.precompile;
 
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 
+import java.util.function.Consumer;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,5 +54,36 @@ public abstract class AbstractPrecompiledContract implements PrecompiledContract
   @Override
   public String getName() {
     return name;
+  }
+
+  /** Default result caching to false unless otherwise set. */
+  protected static Boolean enableResultCaching = Boolean.FALSE;
+
+  /**
+   * Enable or disable precompile result caching.
+   *
+   * @param enablePrecompileCaching boolean indicating whether to cache precompile results
+   */
+  public static void setPrecompileCaching(final boolean enablePrecompileCaching) {
+    enableResultCaching = enablePrecompileCaching;
+  }
+
+  public enum CacheMetric {
+    HIT,
+    MISS,
+    FALSE_POSITIVE
+  }
+
+  public record CacheEvent(String precompile, CacheMetric cacheMetric) {}
+
+  public static Consumer<CacheEvent> cacheEventConsumer = __ -> {};
+
+  /**
+   * Set an optional cache event consumer, such as a metrics system logger.
+   *
+   * @param eventConsumer consumer of the CacheEvent.
+   */
+  public static void setCacheEventConsumer(final Consumer<CacheEvent> eventConsumer) {
+    cacheEventConsumer = eventConsumer;
   }
 }
