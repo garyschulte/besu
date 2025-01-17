@@ -24,10 +24,12 @@ import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 
 import java.math.BigInteger;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.base.Stopwatch;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.bytes.MutableBytes;
@@ -75,6 +77,7 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
   @Override
   public PrecompileContractResult computePrecompile(
       final Bytes input, @Nonnull final MessageFrame messageFrame) {
+    final Stopwatch sw = Stopwatch.createStarted();
     final int size = input.size();
     final Bytes nonMutatedInput = input.copy();
     final Bytes d = size >= 128 ? input : Bytes.wrap(input, MutableBytes.create(128 - size));
@@ -89,12 +92,16 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
 
     PrecompileInputResultTuple res;
 
+    Stopwatch sw2 = Stopwatch.createStarted();
     if (enableResultCaching) {
       res = ecrecCache.getIfPresent(nonMutatedInput.hashCode());
 
       if (res != null) {
         if (res.cachedInput().equals(nonMutatedInput)) {
           cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.HIT));
+          System.err.printf(
+              "\tecrecover cache hit, lookup time %d ns, total time %d ns\n",
+              sw2.elapsed(TimeUnit.NANOSECONDS), sw.elapsed(TimeUnit.NANOSECONDS));
           return res.cachedResult();
         } else {
           LOG.info(
@@ -108,6 +115,8 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
         cacheEventConsumer.accept(new CacheEvent(PRECOMPILE_NAME, CacheMetric.MISS));
       }
     }
+    System.err.printf(
+        "\tecrecover cache miss, lookup time %d ns\n", sw2.elapsed(TimeUnit.NANOSECONDS));
 
     final int recId = d.get(63) - V_BASE;
     final BigInteger r = d.slice(64, 32).toUnsignedBigInteger();
@@ -131,7 +140,11 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
         res =
             new PrecompileInputResultTuple(
                 nonMutatedInput, PrecompileContractResult.success(Bytes.EMPTY));
+        sw2.reset();
         ecrecCache.put(nonMutatedInput.hashCode(), res);
+        System.err.printf(
+            "\tecrecover caching result, put time %d ns, total time %d ns\n",
+            sw2.elapsed(TimeUnit.NANOSECONDS), sw.elapsed(TimeUnit.NANOSECONDS));
         return res.cachedResult();
       }
 
@@ -141,7 +154,11 @@ public class ECRECPrecompiledContract extends AbstractPrecompiledContract {
       res =
           new PrecompileInputResultTuple(nonMutatedInput, PrecompileContractResult.success(result));
       if (enableResultCaching) {
+        sw2.reset();
         ecrecCache.put(nonMutatedInput.hashCode(), res);
+        System.err.printf(
+            "\tecrecover caching result, put time %d ns, total time %d ns\n",
+            sw2.elapsed(TimeUnit.NANOSECONDS), sw.elapsed(TimeUnit.NANOSECONDS));
       }
       return res.cachedResult();
     } catch (final IllegalArgumentException e) {
