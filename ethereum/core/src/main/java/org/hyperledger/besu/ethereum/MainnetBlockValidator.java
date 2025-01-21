@@ -178,8 +178,7 @@ public class MainnetBlockValidator implements BlockValidator {
             ommerValidationMode,
             // TODO: disabling body validation for non-state root calculating PoC hack
             // BodyValidationMode.FULL
-            BodyValidationMode.NONE
-        )) {
+            BodyValidationMode.NONE)) {
           result = new BlockProcessingResult("failed to validate output of imported block");
           handleFailedBlockProcessing(block, result, shouldRecordBadBlock);
           return result;

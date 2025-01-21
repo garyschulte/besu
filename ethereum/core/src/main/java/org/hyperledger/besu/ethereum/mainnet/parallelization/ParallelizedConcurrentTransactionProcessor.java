@@ -41,6 +41,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Optimizes transaction processing by executing transactions in parallel within a given block.
@@ -51,6 +53,8 @@ import com.google.common.annotations.VisibleForTesting;
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class ParallelizedConcurrentTransactionProcessor {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ParallelizedConcurrentTransactionProcessor.class);
   private static final int NCPU = Runtime.getRuntime().availableProcessors();
   private static final Executor executor = Executors.newFixedThreadPool(NCPU);
 
@@ -105,7 +109,7 @@ public class ParallelizedConcurrentTransactionProcessor {
       final Wei blobGasPrice,
       final PrivateMetadataUpdater privateMetadataUpdater) {
     for (int i = 0; i < transactions.size(); i++) {
-      final Transaction transaction = transactions.get(i);
+      final Transaction transaction = transactions.get(i).detachedCopy();
       final int transactionLocation = i;
       /*
        * All transactions are executed in the background by copying the world state of the block on which the transactions need to be executed, ensuring that each one has its own accumulator.
@@ -205,6 +209,7 @@ public class ParallelizedConcurrentTransactionProcessor {
         }
       } catch (Exception ex) {
         // no op as failing to get worldstate
+        LOG.warn("Failed to get worldstate for parallelized tx");
       }
     }
   }

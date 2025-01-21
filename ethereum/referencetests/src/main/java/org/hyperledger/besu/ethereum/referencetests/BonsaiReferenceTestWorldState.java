@@ -43,13 +43,9 @@ import java.util.Optional;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class BonsaiReferenceTestWorldState extends BonsaiWorldState
     implements ReferenceTestWorldState {
-
-  private static final Logger LOG = LoggerFactory.getLogger(BonsaiReferenceTestWorldState.class);
 
   private final EvmConfiguration evmConfiguration;
 
