@@ -977,7 +977,16 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
       VersionMetadata.versionCompatibilityChecks(versionCompatibilityProtection, dataDir());
 
       configureNativeLibs();
-      AbstractPrecompiledContract.setPrecompileCaching(enablePrecompileCaching);
+
+      if (enablePrecompileCaching
+          && getDataStorageConfiguration()
+              .getDiffBasedSubStorageConfiguration()
+              .getUnstable()
+              .isParallelTxProcessingEnabled()) {
+        // enable precompile caching if it is enabled and parallel tx processing is enabled:
+        configurePrecompileCaching();
+      }
+
       besuController = buildController();
 
       besuPluginContext.beforeExternalServices();
@@ -1000,6 +1009,28 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
       logger.error("Failed to start Besu", e);
       throw new ParameterException(this.commandLine, e.getMessage(), e);
     }
+  }
+
+  private void configurePrecompileCaching() {
+    // enable precompile caching:
+    AbstractPrecompiledContract.setPrecompileCaching(enablePrecompileCaching);
+
+    // set a metric logger
+    final var precompileCounter =
+        getMetricsSystem()
+            .createLabelledCounter(
+                BesuMetricCategory.BLOCK_PROCESSING,
+                "precompile_cache",
+                "precompile cache labeled counter",
+                "precompile_name",
+                "event");
+
+    // set a cache event consumer which logs a metrics event
+    AbstractPrecompiledContract.setCacheEventConsumer(
+        cacheEvent ->
+            precompileCounter
+                .labels(cacheEvent.precompile(), cacheEvent.cacheMetric().name())
+                .inc());
   }
 
   private void checkPermissionsAndPrintPaths(final String userName) {
