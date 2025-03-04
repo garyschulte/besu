@@ -107,7 +107,9 @@ licenseReport {
     'org.checkerframework:dataflow-errorprone',
     // exclude Kotlin multiplatform dependencies container, they have the same license of what they contain
     'com.squareup.okio:okio',
-    'org.jetbrains.kotlinx:kotlinx-coroutines-core'
+    'org.jetbrains.kotlinx:kotlinx-coroutines-core',
+    // Temporarily exclude rocksdbjni for local build testing
+    'org.rocksdb:rocksdbjni'
   ]
 
   // If set to true, then all boms will be excluded from the report
@@ -164,6 +166,8 @@ configure(allprojects - project(':platform')) {
       url 'https://splunk.jfrog.io/splunk/ext-releases-local'
       content { includeGroupByRegex('com\\.splunk\\..*') }
     }
+
+    mavenLocal()
 
     mavenCentral()
 
