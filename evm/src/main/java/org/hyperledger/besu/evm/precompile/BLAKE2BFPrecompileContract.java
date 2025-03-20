@@ -112,7 +112,7 @@ public class BLAKE2BFPrecompileContract extends AbstractPrecompiledContract {
 
     res =
         new PrecompileInputResultTuple(
-            input, PrecompileContractResult.success(Hash.blake2bf(input)));
+            input.copy(), PrecompileContractResult.success(Hash.blake2bf(input)));
 
     if (cacheKey != null) {
       blakeCache.put(cacheKey, res);

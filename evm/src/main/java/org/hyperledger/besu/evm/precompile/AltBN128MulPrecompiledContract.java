@@ -119,9 +119,13 @@ public class AltBN128MulPrecompiledContract extends AbstractAltBnPrecompiledCont
     }
 
     if (useNative) {
-      res = new PrecompileInputResultTuple(input, computeNative(input, messageFrame));
+      res =
+          new PrecompileInputResultTuple(
+              enableResultCaching ? input.copy() : input, computeNative(input, messageFrame));
     } else {
-      res = new PrecompileInputResultTuple(input, computeDefault(input));
+      res =
+          new PrecompileInputResultTuple(
+              enableResultCaching ? input.copy() : input, computeDefault(input));
     }
     if (cacheKey != null) {
       bnMulCache.put(cacheKey, res);
@@ -160,7 +164,7 @@ public class AltBN128MulPrecompiledContract extends AbstractAltBnPrecompiledCont
     return new BigInteger(1, raw);
   }
 
-  static Integer getCacheKey(final Bytes input){
+  static Integer getCacheKey(final Bytes input) {
     return Arrays.hashCode(input.toArrayUnsafe());
   }
 }
