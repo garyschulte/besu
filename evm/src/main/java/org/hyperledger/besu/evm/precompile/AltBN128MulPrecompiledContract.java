@@ -92,6 +92,7 @@ public class AltBN128MulPrecompiledContract extends AbstractAltBnPrecompiledCont
     Integer cacheKey = null;
     if (enableResultCaching) {
       cacheKey = getCacheKey(input);
+      System.err.println("cache key " + cacheKey + " for " + input.toHexString());
       res = bnMulCache.getIfPresent(cacheKey);
       if (res != null) {
         if (res.cachedInput().equals(input)) {
