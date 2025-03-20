@@ -34,6 +34,7 @@ import javax.annotation.Nonnull;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.tuweni.bytes.Bytes;
 
 /** The AltBN128Pairing precompiled contract. */
@@ -42,7 +43,9 @@ public class AltBN128PairingPrecompiledContract extends AbstractAltBnPrecompiled
   private static final int FIELD_LENGTH = 32;
   private static final int PARAMETER_LENGTH = 192;
   private static final String PRECOMPILE_NAME = "AltBN128Pairing";
-  private static final Cache<Integer, PrecompileInputResultTuple> bnPairingCache =
+
+  @VisibleForTesting
+  static final Cache<Integer, PrecompileInputResultTuple> bnPairingCache =
       Caffeine.newBuilder()
           .maximumWeight(16_000_000)
           .weigher((k, v) -> ((PrecompileInputResultTuple) v).cachedInput().size())
@@ -110,7 +113,7 @@ public class AltBN128PairingPrecompiledContract extends AbstractAltBnPrecompiled
     PrecompileInputResultTuple res;
     Integer cacheKey = null;
     if (enableResultCaching) {
-      cacheKey = Arrays.hashCode(input.toArrayUnsafe());
+      cacheKey = getCacheKey(input);
       res = bnPairingCache.getIfPresent(cacheKey);
       if (res != null) {
         if (res.cachedInput().equals(input)) {
@@ -183,5 +186,10 @@ public class AltBN128PairingPrecompiledContract extends AbstractAltBnPrecompiled
     }
     final byte[] raw = Arrays.copyOfRange(input.toArrayUnsafe(), offset, offset + length);
     return new BigInteger(1, raw);
+  }
+
+  @VisibleForTesting
+  static Integer getCacheKey(final Bytes input) {
+    return Arrays.hashCode(input.toArrayUnsafe());
   }
 }

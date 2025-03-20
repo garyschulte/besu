@@ -100,4 +100,19 @@ class BLAKE2BFPrecompileContractTest {
         .withFailMessage("This test is here so gradle --dry-run executes this class")
         .isTrue();
   }
+
+  //  @ParameterizedTest
+  //  @MethodSource("parameters")
+  //  void assertCache(final String inputString, final String expectedResult, final long
+  // expectedGasUsed) {
+  //    BLAKE2BFPrecompileContract.setPrecompileCaching(true);
+  //    testFCompression(inputString, expectedResult, expectedGasUsed);
+  //    var copyInput = Bytes.fromHexString(inputString);
+  //    istanbulContract.computePrecompile(validPointBytes(), messageFrame);
+  //    var cacheKey = AltBN128PairingPrecompiledContract.getCacheKey(input);
+  //    var cachedRes = AltBN128PairingPrecompiledContract.bnPairingCache.getIfPresent(cacheKey);
+  //    assertThat(cachedRes).isNotNull();
+  //    assertThat(cachedRes.cachedInput()).isEqualTo(copyInput);
+  //  }
+
 }

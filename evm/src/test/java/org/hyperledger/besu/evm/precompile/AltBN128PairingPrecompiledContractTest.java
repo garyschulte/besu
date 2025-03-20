@@ -145,4 +145,24 @@ class AltBN128PairingPrecompiledContractTest {
     // gas calculation is java only
     assertThat(istanbulContract.gasRequirement(validPointBytes())).isEqualTo(113_000L);
   }
+
+  @Test
+  void assertCache() {
+    AltBN128PairingPrecompiledContract.setPrecompileCaching(true);
+    var input = validPointBytes();
+    var next = Bytes.concatenate(input.slice(192), input.slice(0, 192));
+    istanbulContract.computePrecompile(validPointBytes(), messageFrame);
+    var cacheKey = AltBN128PairingPrecompiledContract.getCacheKey(input);
+    var nextCacheKey = AltBN128PairingPrecompiledContract.getCacheKey(next);
+    istanbulContract.computePrecompile(next, messageFrame);
+    var cachedRes = AltBN128PairingPrecompiledContract.bnPairingCache.getIfPresent(cacheKey);
+    var nextCachedRes =
+        AltBN128PairingPrecompiledContract.bnPairingCache.getIfPresent(nextCacheKey);
+
+    assertThat(cachedRes).isNotNull();
+    assertThat(cachedRes.cachedInput()).isEqualTo(input);
+    assertThat(nextCachedRes).isNotNull();
+    assertThat(nextCachedRes.cachedInput()).isEqualTo(next);
+    assertThat(nextCachedRes.cachedResult()).isEqualTo(cachedRes.cachedResult());
+  }
 }
