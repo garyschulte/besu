@@ -108,7 +108,11 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
           Optional.ofNullable(protocolContext.getPluginServiceManager())
               .flatMap(serviceManager -> serviceManager.getService(BlockImportTracerProvider.class))
               // if block import tracer provider is not specified by plugin, default to no tracing
-              .orElse((__) -> BlockAwareOperationTracer.NO_TRACING);
+              .orElse(
+                  (__) -> {
+                    LOG.info("Block Import uses NO_TRACING");
+                    return BlockAwareOperationTracer.NO_TRACING;
+                  });
     }
 
     return blockImportTracerProvider.getBlockImportTracer(header);
@@ -154,13 +158,16 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
     final ProtocolSpec protocolSpec = protocolSchedule.getByBlockHeader(blockHeader);
     final BlockHashLookup blockHashLookup =
         protocolSpec.getBlockHashProcessor().createBlockHashLookup(blockchain, blockHeader);
+
+    final BlockAwareOperationTracer blockTracer =
+        getBlockImportTracer(protocolContext, blockHeader);
+
+    LOG.info("traceStartBlock for {}", blockHeader.getNumber());
+    blockTracer.traceStartBlock(blockHeader, blockHeader.getCoinbase());
+
     final BlockProcessingContext blockProcessingContext =
         new BlockProcessingContext(
-            blockHeader,
-            worldState,
-            protocolSpec,
-            blockHashLookup,
-            getBlockImportTracer(protocolContext, blockHeader));
+            blockHeader, worldState, protocolSpec, blockHashLookup, blockTracer);
     protocolSpec.getBlockHashProcessor().process(blockProcessingContext);
 
     final Address miningBeneficiary = miningBeneficiaryCalculator.calculateBeneficiary(blockHeader);
@@ -302,6 +309,14 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
       }
       return new BlockProcessingResult(Optional.empty(), "ommer too old");
     }
+
+    // temporary hack, should refactor to pass in block body
+    blockchain
+        .getBlockBody(blockHeader.getBlockHash())
+        .ifPresent(blockBody -> {
+          LOG.info("traceEndBlock for {}", blockHeader.getNumber());
+          blockTracer.traceEndBlock(blockHeader, blockBody);
+        });
 
     try {
       worldState.persist(blockHeader);
