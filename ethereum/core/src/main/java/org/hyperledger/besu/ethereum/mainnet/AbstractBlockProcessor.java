@@ -313,10 +313,11 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
     // temporary hack, should refactor to pass in block body
     blockchain
         .getBlockBody(blockHeader.getBlockHash())
-        .ifPresent(blockBody -> {
-          LOG.info("traceEndBlock for {}", blockHeader.getNumber());
-          blockTracer.traceEndBlock(blockHeader, blockBody);
-        });
+        .ifPresent(
+            blockBody -> {
+              LOG.info("traceEndBlock for {}", blockHeader.getNumber());
+              blockTracer.traceEndBlock(blockHeader, blockBody);
+            });
 
     try {
       worldState.persist(blockHeader);
