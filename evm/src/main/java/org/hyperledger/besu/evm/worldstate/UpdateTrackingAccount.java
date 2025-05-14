@@ -237,6 +237,10 @@ public class UpdateTrackingAccount<A extends Account> implements MutableAccount 
     if (value != null) {
       return value;
     }
+
+    // mark a zero read in the updatedStorage
+    updatedStorage.put(key, UInt256.ZERO);
+
     if (storageWasCleared) {
       return UInt256.ZERO;
     }
