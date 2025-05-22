@@ -18,6 +18,8 @@ import static org.hyperledger.besu.ethereum.trie.pathbased.common.provider.World
 
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.datatypes.StorageSlotKey;
+import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.MutableWorldState;
@@ -32,20 +34,30 @@ import org.hyperledger.besu.ethereum.trie.pathbased.common.worldview.WorldStateC
 import org.hyperledger.besu.ethereum.trie.pathbased.common.worldview.accumulator.PathBasedWorldStateUpdateAccumulator;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateStorageCoordinator;
+import org.hyperledger.besu.evm.account.Account;
+import org.hyperledger.besu.evm.account.MutableAccount;
+import org.hyperledger.besu.evm.fluent.SimpleAccount;
 import org.hyperledger.besu.evm.worldstate.WorldState;
+import org.hyperledger.besu.evm.worldstate.WorldUpdater;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.trielogs.TrieLog;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("unused")
 public abstract class PathBasedWorldStateProvider implements WorldStateArchive {
 
   private static final Logger LOG = LoggerFactory.getLogger(PathBasedWorldStateProvider.class);
@@ -141,7 +153,12 @@ public abstract class PathBasedWorldStateProvider implements WorldStateArchive {
   @Override
   public Optional<MutableWorldState> getWorldState(final WorldStateQueryParams queryParams) {
     if (worldStateConfig.isStateful()) {
+
+      if (queryParams.wantHack()) {
+        return getHackedWorldState(queryParams);
+      }
       return getFullWorldState(queryParams);
+
     } else {
       throw new RuntimeException("stateless mode is not yet available");
     }
@@ -179,6 +196,10 @@ public abstract class PathBasedWorldStateProvider implements WorldStateArchive {
     return queryParams.shouldWorldStateUpdateHead()
         ? getFullWorldStateFromHead(queryParams.getBlockHash())
         : getFullWorldStateFromCache(queryParams.getBlockHeader());
+  }
+
+  private Optional<MutableWorldState> getHackedWorldState(final WorldStateQueryParams queryParams) {
+    return Optional.of(new HackedWorldState(this.headWorldState));
   }
 
   /**
@@ -388,6 +409,122 @@ public abstract class PathBasedWorldStateProvider implements WorldStateArchive {
       worldStateKeyValueStorage.close();
     } catch (Exception e) {
       // no op
+    }
+  }
+
+  static class HackedWorldUpdater implements WorldUpdater {
+
+    Map<Address, Optional<Account>> accountOverlay = new HashMap<>();
+    Map<Address, Map<StorageSlotKey, Optional<Bytes>>> storageOverlay = new HashMap<>();
+    Map<Hash, Optional<Bytes>> codeOverlay = new HashMap<>();
+    final WorldState frozenWorldState;
+
+    HackedWorldUpdater(final WorldState frozenWorldState) {
+      this.frozenWorldState = frozenWorldState;
+    }
+
+    @Override
+    public MutableAccount createAccount(
+        final Address address, final long nonce, final Wei balance) {
+      if (getAccount(address) != null) {
+        throw new IllegalStateException("Cannot create an account when one already exists");
+      }
+      SimpleAccount account = new SimpleAccount(address, nonce, balance);
+      accountOverlay.put(address, Optional.of(account));
+      return account;
+    }
+
+    @Override
+    public MutableAccount getAccount(final Address address) {
+      return Optional.of(accountOverlay.get(address))
+          .or(() -> Optional.of(Optional.of(frozenWorldState.get(address))))
+          .map(
+              optPa ->
+                  optPa.map(
+                      parentAccount ->
+                          new SimpleAccount(
+                              parentAccount,
+                              parentAccount.getAddress(),
+                              parentAccount.getNonce(),
+                              parentAccount.getBalance(),
+                              parentAccount.getCode())))
+          .get()
+          .orElse(null);
+    }
+
+    @Override
+    public void deleteAccount(final Address address) {
+      accountOverlay.put(address, Optional.empty());
+    }
+
+    @Override
+    public Collection<? extends Account> getTouchedAccounts() {
+      return List.of();
+    }
+
+    @Override
+    public Collection<Address> getDeletedAccountAddresses() {
+      return List.of();
+    }
+
+    @Override
+    public void revert() {}
+
+    @Override
+    public void commit() {}
+
+    @Override
+    public Optional<WorldUpdater> parentUpdater() {
+      return Optional.empty();
+    }
+
+    @Override
+    public WorldUpdater updater() {
+      return null;
+    }
+
+    @Override
+    public Account get(final Address address) {
+      return getAccount(address);
+    }
+  }
+
+  static class HackedWorldState implements MutableWorldState {
+
+    final HackedWorldUpdater updater;
+
+    HackedWorldState(final WorldState frozenParent) {
+      this.updater = new HackedWorldUpdater(frozenParent);
+    }
+
+    @Override
+    public void persist(final BlockHeader blockHeader) {
+      // meh
+    }
+
+    @Override
+    public WorldUpdater updater() {
+      return updater;
+    }
+
+    @Override
+    public Hash rootHash() {
+      return Hash.ZERO;
+    }
+
+    @Override
+    public Hash frontierRootHash() {
+      return Hash.ZERO;
+    }
+
+    @Override
+    public Stream<StreamableAccount> streamAccounts(final Bytes32 startKeyHash, final int limit) {
+      return Stream.empty();
+    }
+
+    @Override
+    public Account get(final Address address) {
+      return updater.getAccount(address);
     }
   }
 }

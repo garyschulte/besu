@@ -39,6 +39,7 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 import org.hyperledger.besu.ethereum.mainnet.TransactionValidationParams;
 import org.hyperledger.besu.ethereum.processing.TransactionProcessingResult;
+import org.hyperledger.besu.ethereum.trie.pathbased.common.provider.WorldStateQueryParams;
 import org.hyperledger.besu.ethereum.vm.DebugOperationTracer;
 import org.hyperledger.besu.ethereum.worldstate.WorldStateArchive;
 import org.hyperledger.besu.evm.account.Account;
@@ -339,8 +340,14 @@ public class TransactionSimulator {
   }
 
   private MutableWorldState getWorldState(final BlockHeader header) {
+    var params =
+        WorldStateQueryParams.newBuilder()
+            .withBlockHeader(header)
+            .withShouldWorldStateUpdateHead(false)
+            .wantHack()
+            .build();
     return worldStateArchive
-        .getWorldState(withBlockHeaderAndNoUpdateNodeHead(header))
+        .getWorldState(params)
         .orElseThrow(
             () ->
                 new IllegalArgumentException(

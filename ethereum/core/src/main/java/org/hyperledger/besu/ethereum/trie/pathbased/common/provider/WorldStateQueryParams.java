@@ -26,6 +26,7 @@ public class WorldStateQueryParams {
   private final boolean shouldWorldStateUpdateHead;
   private final Hash blockHash;
   private final Optional<Hash> stateRoot;
+  private final Boolean wantHack;
 
   /**
    * Private constructor to enforce the use of the Builder.
@@ -37,6 +38,7 @@ public class WorldStateQueryParams {
     this.shouldWorldStateUpdateHead = builder.shouldWorldStateUpdateHead;
     this.blockHash = builder.blockHash;
     this.stateRoot = builder.stateRoot;
+    this.wantHack = builder.wantHack;
   }
 
   /**
@@ -73,6 +75,10 @@ public class WorldStateQueryParams {
    */
   public Optional<Hash> getStateRoot() {
     return stateRoot;
+  }
+
+  public boolean wantHack() {
+    return wantHack;
   }
 
   /**
@@ -169,6 +175,7 @@ public class WorldStateQueryParams {
     private boolean shouldWorldStateUpdateHead = false;
     private Hash blockHash;
     private Optional<Hash> stateRoot = Optional.empty();
+    private boolean wantHack = false;
 
     private Builder() {}
 
@@ -216,6 +223,11 @@ public class WorldStateQueryParams {
      */
     public Builder withStateRoot(final Hash stateRoot) {
       this.stateRoot = Optional.ofNullable(stateRoot);
+      return this;
+    }
+
+    public Builder wantHack() {
+      this.wantHack = true;
       return this;
     }
 
