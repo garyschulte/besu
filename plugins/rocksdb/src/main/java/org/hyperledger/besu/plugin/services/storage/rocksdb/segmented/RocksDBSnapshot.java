@@ -50,9 +50,10 @@ class RocksDBSnapshot {
     }
   }
 
-  public byte[] get(final ColumnFamilyHandle columnFamilyHandle,  final ReadOptions readOptions, final byte[] key) throws RocksDBException {
+  public byte[] get(
+      final ColumnFamilyHandle columnFamilyHandle, final ReadOptions readOptions, final byte[] key)
+      throws RocksDBException {
     readOptions.setSnapshot(dbSnapshot);
-    return db.get(columnFamilyHandle, readOptions,key );
+    return db.get(columnFamilyHandle, readOptions, key);
   }
-
 }

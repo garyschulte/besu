@@ -33,22 +33,20 @@ import org.rocksdb.OptimisticTransactionDB;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.RocksIterator;
-import org.rocksdb.Transaction;
-import org.rocksdb.WriteOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** The Rocks db snapshot transaction. */
 public class RocksDBSnapshotTransaction
-        implements SegmentedKeyValueStorageTransaction, AutoCloseable {
+    implements SegmentedKeyValueStorageTransaction, AutoCloseable {
   private static final Logger LOG = LoggerFactory.getLogger(RocksDBSnapshotTransaction.class);
-  private static final String NO_SPACE_LEFT_ON_DEVICE = "No space left on device";
+  // private static final String NO_SPACE_LEFT_ON_DEVICE = "No space left on device";
   private final RocksDBMetrics metrics;
   private final OptimisticTransactionDB db;
   private final Function<SegmentIdentifier, ColumnFamilyHandle> columnFamilyMapper;
-  private final Transaction snapTx;
+  //  private final Transaction snapTx;
   private final RocksDBSnapshot snapshot;
-  private final WriteOptions writeOptions;
+  //  private final WriteOptions writeOptions;
   private final ReadOptions readOptions;
   private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
@@ -60,34 +58,34 @@ public class RocksDBSnapshotTransaction
    * @param metrics the metrics
    */
   RocksDBSnapshotTransaction(
-          final OptimisticTransactionDB db,
-          final Function<SegmentIdentifier, ColumnFamilyHandle> columnFamilyMapper,
-          final RocksDBMetrics metrics) {
+      final OptimisticTransactionDB db,
+      final Function<SegmentIdentifier, ColumnFamilyHandle> columnFamilyMapper,
+      final RocksDBMetrics metrics) {
     this.metrics = metrics;
     this.db = db;
     this.columnFamilyMapper = columnFamilyMapper;
     this.snapshot = new RocksDBSnapshot(db);
-    this.writeOptions = new WriteOptions();
-    this.snapTx = db.beginTransaction(writeOptions);
+    //    this.writeOptions = new WriteOptions();
+    //    this.snapTx = db.beginTransaction(writeOptions);
     this.readOptions =
-            new ReadOptions().setVerifyChecksums(false).setSnapshot(snapshot.markAndUseSnapshot());
+        new ReadOptions().setVerifyChecksums(false).setSnapshot(snapshot.markAndUseSnapshot());
   }
 
-  private RocksDBSnapshotTransaction(
-          final OptimisticTransactionDB db,
-          final Function<SegmentIdentifier, ColumnFamilyHandle> columnFamilyMapper,
-          final RocksDBMetrics metrics,
-          final RocksDBSnapshot snapshot,
-          final Transaction snapTx,
-          final ReadOptions readOptions) {
-    this.metrics = metrics;
-    this.db = db;
-    this.columnFamilyMapper = columnFamilyMapper;
-    this.snapshot = snapshot;
-    this.writeOptions = new WriteOptions();
-    this.readOptions = readOptions;
-    this.snapTx = snapTx;
-  }
+  //  private RocksDBSnapshotTransaction(
+  //      final OptimisticTransactionDB db,
+  //      final Function<SegmentIdentifier, ColumnFamilyHandle> columnFamilyMapper,
+  //      final RocksDBMetrics metrics,
+  //      final RocksDBSnapshot snapshot,
+  //      final Transaction snapTx,
+  //      final ReadOptions readOptions) {
+  //    this.metrics = metrics;
+  //    this.db = db;
+  //    this.columnFamilyMapper = columnFamilyMapper;
+  //    this.snapshot = snapshot;
+  //    this.writeOptions = new WriteOptions();
+  //    this.readOptions = readOptions;
+  //    this.snapTx = snapTx;
+  //  }
 
   /**
    * Get data against given key.
@@ -99,7 +97,8 @@ public class RocksDBSnapshotTransaction
   public Optional<byte[]> get(final SegmentIdentifier segmentId, final byte[] key) {
     throwIfClosed();
     try (final OperationTimer.TimingContext ignored = metrics.getReadLatency().startTimer()) {
-      return Optional.ofNullable(snapshot.get(columnFamilyMapper.apply(segmentId), readOptions, key));
+      return Optional.ofNullable(
+          snapshot.get(columnFamilyMapper.apply(segmentId), readOptions, key));
     } catch (final RocksDBException e) {
       throw new StorageException(e);
     }
@@ -107,32 +106,38 @@ public class RocksDBSnapshotTransaction
 
   @Override
   public void put(final SegmentIdentifier segmentId, final byte[] key, final byte[] value) {
-    throwIfClosed();
+    // no-op for test:
 
-    try (final OperationTimer.TimingContext ignored = metrics.getWriteLatency().startTimer()) {
-      snapTx.put(columnFamilyMapper.apply(segmentId), key, value);
-    } catch (final RocksDBException e) {
-      if (e.getMessage().contains(NO_SPACE_LEFT_ON_DEVICE)) {
-        LOG.error(e.getMessage());
-        System.exit(0);
-      }
-      throw new StorageException(e);
-    }
+    //    throwIfClosed();
+    //
+    //    try (final OperationTimer.TimingContext ignored = metrics.getWriteLatency().startTimer())
+    // {
+    //      snapTx.put(columnFamilyMapper.apply(segmentId), key, value);
+    //    } catch (final RocksDBException e) {
+    //      if (e.getMessage().contains(NO_SPACE_LEFT_ON_DEVICE)) {
+    //        LOG.error(e.getMessage());
+    //        System.exit(0);
+    //      }
+    //      throw new StorageException(e);
+    //    }
   }
 
   @Override
   public void remove(final SegmentIdentifier segmentId, final byte[] key) {
-    throwIfClosed();
+    // no-op for test
 
-    try (final OperationTimer.TimingContext ignored = metrics.getRemoveLatency().startTimer()) {
-      snapTx.delete(columnFamilyMapper.apply(segmentId), key);
-    } catch (final RocksDBException e) {
-      if (e.getMessage().contains(NO_SPACE_LEFT_ON_DEVICE)) {
-        LOG.error(e.getMessage());
-        System.exit(0);
-      }
-      throw new StorageException(e);
-    }
+    //    throwIfClosed();
+    //
+    //    try (final OperationTimer.TimingContext ignored = metrics.getRemoveLatency().startTimer())
+    // {
+    //      snapTx.delete(columnFamilyMapper.apply(segmentId), key);
+    //    } catch (final RocksDBException e) {
+    //      if (e.getMessage().contains(NO_SPACE_LEFT_ON_DEVICE)) {
+    //        LOG.error(e.getMessage());
+    //        System.exit(0);
+    //      }
+    //      throw new StorageException(e);
+    //    }
   }
 
   /**
@@ -145,7 +150,8 @@ public class RocksDBSnapshotTransaction
    * @return RocksIterator
    */
   public RocksIterator getIterator(final SegmentIdentifier segmentId) {
-    return snapTx.getIterator(readOptions, columnFamilyMapper.apply(segmentId));
+    // return snapTx.getIterator(readOptions, columnFamilyMapper.apply(segmentId));
+    return db.newIterator(columnFamilyMapper.apply(segmentId), readOptions);
   }
 
   /**
@@ -156,9 +162,8 @@ public class RocksDBSnapshotTransaction
    */
   public Stream<Pair<byte[], byte[]>> stream(final SegmentIdentifier segmentId) {
     throwIfClosed();
-
     final RocksIterator rocksIterator =
-            db.newIterator(columnFamilyMapper.apply(segmentId), readOptions);
+        db.newIterator(columnFamilyMapper.apply(segmentId), readOptions);
     rocksIterator.seekToFirst();
     return RocksDbIterator.create(rocksIterator).toStream();
   }
@@ -173,7 +178,7 @@ public class RocksDBSnapshotTransaction
     throwIfClosed();
 
     final RocksIterator rocksIterator =
-            db.newIterator(columnFamilyMapper.apply(segmentId), readOptions);
+        db.newIterator(columnFamilyMapper.apply(segmentId), readOptions);
     rocksIterator.seekToFirst();
     return RocksDbIterator.create(rocksIterator).toStreamKeys();
   }
@@ -188,11 +193,11 @@ public class RocksDBSnapshotTransaction
    * @return A stream of key-value pairs starting from the specified key.
    */
   public Stream<Pair<byte[], byte[]>> streamFromKey(
-          final SegmentIdentifier segment, final byte[] startKey) {
+      final SegmentIdentifier segment, final byte[] startKey) {
     throwIfClosed();
 
     final RocksIterator rocksIterator =
-            db.newIterator(columnFamilyMapper.apply(segment), readOptions);
+        db.newIterator(columnFamilyMapper.apply(segment), readOptions);
     rocksIterator.seek(startKey);
     return RocksDbIterator.create(rocksIterator).toStream();
   }
@@ -209,16 +214,16 @@ public class RocksDBSnapshotTransaction
    * @return A stream of key-value pairs starting from the specified key.
    */
   public Stream<Pair<byte[], byte[]>> streamFromKey(
-          final SegmentIdentifier segment, final byte[] startKey, final byte[] endKey) {
+      final SegmentIdentifier segment, final byte[] startKey, final byte[] endKey) {
     throwIfClosed();
     final Bytes endKeyBytes = Bytes.wrap(endKey);
 
     final RocksIterator rocksIterator =
-            db.newIterator(columnFamilyMapper.apply(segment), readOptions);
+        db.newIterator(columnFamilyMapper.apply(segment), readOptions);
     rocksIterator.seek(startKey);
     return RocksDbIterator.create(rocksIterator)
-            .toStream()
-            .takeWhile(e -> endKeyBytes.compareTo(Bytes.wrap(e.getKey())) >= 0);
+        .toStream()
+        .takeWhile(e -> endKeyBytes.compareTo(Bytes.wrap(e.getKey())) >= 0);
   }
 
   @Override
@@ -228,46 +233,47 @@ public class RocksDBSnapshotTransaction
 
   @Override
   public void rollback() {
-    throwIfClosed();
-
-    try {
-      snapTx.rollback();
-      metrics.getRollbackCount().inc();
-    } catch (final RocksDBException e) {
-      if (e.getMessage().contains(NO_SPACE_LEFT_ON_DEVICE)) {
-        LOG.error(e.getMessage());
-        System.exit(0);
-      }
-      throw new StorageException(e);
-    } finally {
-      close();
-    }
+    // no-op for test
+    //    throwIfClosed();
+    //
+    //    try {
+    //      snapTx.rollback();
+    //      metrics.getRollbackCount().inc();
+    //    } catch (final RocksDBException e) {
+    //      if (e.getMessage().contains(NO_SPACE_LEFT_ON_DEVICE)) {
+    //        LOG.error(e.getMessage());
+    //        System.exit(0);
+    //      }
+    //      throw new StorageException(e);
+    //    } finally {
+    //      close();
+    //    }
   }
 
-  /**
-   * Copy.
-   *
-   * @return the rocks db snapshot transaction
-   */
-  public RocksDBSnapshotTransaction copy() {
-    throwIfClosed();
-    try {
-      var copyReadOptions = new ReadOptions().setSnapshot(snapshot.markAndUseSnapshot());
-      var copySnapTx = db.beginTransaction(writeOptions);
-      copySnapTx.rebuildFromWriteBatch(snapTx.getWriteBatch().getWriteBatch());
-      return new RocksDBSnapshotTransaction(
-              db, columnFamilyMapper, metrics, snapshot, copySnapTx, copyReadOptions);
-    } catch (Exception ex) {
-      LOG.error("Failed to copy snapshot transaction", ex);
-      snapshot.unMarkSnapshot();
-      throw new StorageException(ex);
-    }
-  }
+  //  /**
+  //   * Copy.
+  //   *
+  //   * @return the rocks db snapshot transaction
+  //   */
+  //  public RocksDBSnapshotTransaction copy() {
+  //    throwIfClosed();
+  //    try {
+  //      var copyReadOptions = new ReadOptions().setSnapshot(snapshot.markAndUseSnapshot());
+  //      var copySnapTx = db.beginTransaction(writeOptions);
+  //      copySnapTx.rebuildFromWriteBatch(snapTx.getWriteBatch().getWriteBatch());
+  //      return new RocksDBSnapshotTransaction(
+  //              db, columnFamilyMapper, metrics, snapshot, copySnapTx, copyReadOptions);
+  //    } catch (Exception ex) {
+  //      LOG.error("Failed to copy snapshot transaction", ex);
+  //      snapshot.unMarkSnapshot();
+  //      throw new StorageException(ex);
+  //    }
+  //  }
 
   @Override
   public void close() {
-    snapTx.close();
-    writeOptions.close();
+    //    snapTx.close();
+    //    writeOptions.close();
     readOptions.close();
     snapshot.unMarkSnapshot();
     isClosed.set(true);
