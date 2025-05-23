@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -270,6 +271,15 @@ public abstract class RocksDBColumnarKeyValueStorage implements SegmentedKeyValu
     }
   }
 
+  static final AtomicReference<LRUCache> bigAssedLRUCacheHolder = new AtomicReference<>();
+
+  private static LRUCache getBigAssedLRUCache() {
+    if (bigAssedLRUCacheHolder.get() == null) {
+      bigAssedLRUCacheHolder.set(new LRUCache(2 * 1024 * 1024 * 1024L));
+    }
+    return bigAssedLRUCacheHolder.get();
+  }
+
   /***
    * Create a Block Base Table configuration for each segment, depending on the configuration in place
    * and the segment itself
@@ -278,19 +288,20 @@ public abstract class RocksDBColumnarKeyValueStorage implements SegmentedKeyValu
    * @param config RocksDB configuration
    * @return Block Base Table configuration
    */
+  @SuppressWarnings("unused")
   private BlockBasedTableConfig createBlockBasedTableConfig(
       final SegmentIdentifier segment, final RocksDBConfiguration config) {
-    final LRUCache cache =
-        new LRUCache(
-            config.isHighSpec() && segment.isEligibleToHighSpecFlag()
-                ? ROCKSDB_BLOCKCACHE_SIZE_HIGH_SPEC
-                : config.getCacheCapacity());
+    final LRUCache cache = getBigAssedLRUCache();
+    //        new LRUCache(
+    //            config.isHighSpec() && segment.isEligibleToHighSpecFlag()
+    //                ? ROCKSDB_BLOCKCACHE_SIZE_HIGH_SPEC
+    //                : config.getCacheCapacity());
     return new BlockBasedTableConfig()
         .setFormatVersion(ROCKSDB_FORMAT_VERSION)
         .setBlockCache(cache)
         .setFilterPolicy(new BloomFilter(10, false))
         .setPartitionFilters(true)
-        .setCacheIndexAndFilterBlocks(false)
+        .setCacheIndexAndFilterBlocks(true)
         .setBlockSize(ROCKSDB_BLOCK_SIZE);
   }
 

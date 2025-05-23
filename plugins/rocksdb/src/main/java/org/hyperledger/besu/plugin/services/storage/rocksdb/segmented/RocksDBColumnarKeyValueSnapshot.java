@@ -52,6 +52,7 @@ public class RocksDBColumnarKeyValueSnapshot
 
   /** The Db. */
   final OptimisticTransactionDB db;
+
   private final RocksDBSnapshot snapshot;
   private final AtomicBoolean closed = new AtomicBoolean(false);
   private final RocksDBMetrics metrics;
