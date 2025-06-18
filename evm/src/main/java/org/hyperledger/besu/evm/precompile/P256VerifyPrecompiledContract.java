@@ -14,6 +14,9 @@
  */
 package org.hyperledger.besu.evm.precompile;
 
+import com.sun.jna.Library;
+import com.sun.jna.Native;
+import com.sun.jna.Structure;
 import org.hyperledger.besu.crypto.SECP256R1;
 import org.hyperledger.besu.crypto.SECPPublicKey;
 import org.hyperledger.besu.crypto.SECPSignature;
@@ -22,6 +25,8 @@ import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 
 import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.List;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -29,6 +34,8 @@ import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.asn1.x9.X9ECParameters;
+import org.hyperledger.besu.nativelib.secp256r1.LibSECP256R1;
+import org.hyperledger.besu.nativelib.secp256r1.besuNativeEC.VerifyResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,10 +48,14 @@ public class P256VerifyPrecompiledContract extends AbstractPrecompiledContract {
 
   private static final X9ECParameters R1_PARAMS = SECNamedCurves.getByName("secp256r1");
   private static final BigInteger N = R1_PARAMS.getN();
+  private static final BigInteger N2 = R1_PARAMS.getN().divide(BigInteger.TWO);
+
   private static final BigInteger P = R1_PARAMS.getCurve().getField().getCharacteristic();
 
   private final GasCalculator gasCalculator;
-  private final SignatureAlgorithm signatureAlgorithm;
+  //private final SignatureAlgorithm signatureAlgorithm;
+  // temp use native direct:
+//  private static final LibSECP256R1 libSECP256R1 = new LibSECP256R1();
 
   private static final Cache<Integer, PrecompileInputResultTuple> p256VerifyCache =
       Caffeine.newBuilder().maximumSize(1000).build();
@@ -68,7 +79,7 @@ public class P256VerifyPrecompiledContract extends AbstractPrecompiledContract {
       final GasCalculator gasCalculator, final SignatureAlgorithm signatureAlgorithm) {
     super(PRECOMPILE_NAME, gasCalculator);
     this.gasCalculator = gasCalculator;
-    this.signatureAlgorithm = signatureAlgorithm;
+    //this.signatureAlgorithm = signatureAlgorithm;
   }
 
   @Override
@@ -119,7 +130,7 @@ public class P256VerifyPrecompiledContract extends AbstractPrecompiledContract {
     try {
       // Convert r and s to BigIntegers (unsigned)
       final BigInteger r = rBytes.toUnsignedBigInteger();
-      final BigInteger s = sBytes.toUnsignedBigInteger();
+      BigInteger s = sBytes.toUnsignedBigInteger();
 
       // Check r, s in (0, n)
       if (r.signum() <= 0 || r.compareTo(N) >= 0 || s.signum() <= 0 || s.compareTo(N) >= 0) {
@@ -128,6 +139,12 @@ public class P256VerifyPrecompiledContract extends AbstractPrecompiledContract {
             new PrecompileInputResultTuple(
                 enableResultCaching ? input.copy() : input,
                 PrecompileContractResult.success(INVALID));
+      }
+
+      if (s.compareTo(N2) > 0) {
+        // mathematically equivalent version of malleable signature:
+//        System.err.println("s > n/2, rewriting s");
+        s = N.subtract(s);
       }
 
       // Check qx, qy in [0, p)
@@ -149,12 +166,23 @@ public class P256VerifyPrecompiledContract extends AbstractPrecompiledContract {
       }
 
       if (res == null) {
-        // Create the signature; recID is not used in verification - use 0
-        final SECPSignature signature = signatureAlgorithm.createSignature(r, s, (byte) 0);
-        final SECPPublicKey publicKey = signatureAlgorithm.createPublicKey(pubKeyBytes);
+//        // Create the signature; recID is not used in verification - use 0
+//        final SECPSignature signature = signatureAlgorithm.createSignature(r, s, (byte) 0);
+//        final SECPPublicKey publicKey = signatureAlgorithm.createPublicKey(pubKeyBytes);
+//
+//        final boolean isValid =
+//            signatureAlgorithm.verifyMalleable(messageHash, signature, publicKey);
+//
+        final var sigHashBytes = messageHash.toArrayUnsafe();
 
         final boolean isValid =
-            signatureAlgorithm.verifyMalleable(messageHash, signature, publicKey);
+            //libSECP256R1.verify(messageHash.toArrayUnsafe(), r.toByteArray(), s.toByteArray(), pubKeyBytes.toArrayUnsafe(), true);
+            0 == P256VerifyLib.INSTANCE.p256_verify_malleable_signature(
+                sigHashBytes,
+                sigHashBytes.length,
+                rBytes.toArrayUnsafe(),
+                sBytes.toArrayUnsafe(),
+                Bytes.concatenate(Bytes.of((byte) 0x04), pubKeyBytes).toArrayUnsafe());
 
         res =
             new PrecompileInputResultTuple(
@@ -173,4 +201,14 @@ public class P256VerifyPrecompiledContract extends AbstractPrecompiledContract {
       return PrecompileContractResult.success(INVALID);
     }
   }
+
+  public interface P256VerifyLib extends Library {
+    P256VerifyLib INSTANCE = Native.load("/Users/garyschulte/dev/besu-native/boringssl/boringssl_jni/libp256verify.dylib", P256VerifyLib.class);
+
+    int p256_verify_malleable_signature(
+        byte[] dataHash, int dataHashLength,
+        byte[] signatureR, byte[] signatureS,
+        byte[] publicKeyData);
+  }
+
 }
