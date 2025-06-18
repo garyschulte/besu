@@ -169,19 +169,20 @@ public class P256VerifyPrecompiledContract extends AbstractPrecompiledContract {
 //
         final var sigHashBytes = messageHash.toArrayUnsafe();
 
-        final boolean isValid =
-            //libSECP256R1.verify(messageHash.toArrayUnsafe(), r.toByteArray(), s.toByteArray(), pubKeyBytes.toArrayUnsafe(), true);
-            0 == P256VerifyLib.INSTANCE.p256_verify_malleable_signature(
-                sigHashBytes,
-                sigHashBytes.length,
-                rBytes.toArrayUnsafe(),
-                sBytes.toArrayUnsafe(),
-                Bytes.concatenate(Bytes.of((byte) 0x04), pubKeyBytes).toArrayUnsafe());
+        VerifyResultByValue result = P256VerifyLib.INSTANCE.p256_verify_malleable_signature(
+            sigHashBytes,
+            sigHashBytes.length,
+            rBytes.toArrayUnsafe(),
+            sBytes.toArrayUnsafe(),
+            Bytes.concatenate(Bytes.of((byte) 0x04), pubKeyBytes).toArrayUnsafe());
 
+        if (result.status != 0) {
+          LOG.debug("Verify failed: " + result.message);
+        }
         res =
             new PrecompileInputResultTuple(
                 enableResultCaching ? input.copy() : input,
-                PrecompileContractResult.success(isValid ? VALID : INVALID));
+                PrecompileContractResult.success(result.status == 0 ? VALID : INVALID));
       }
 
       if (enableResultCaching) {
@@ -196,10 +197,16 @@ public class P256VerifyPrecompiledContract extends AbstractPrecompiledContract {
     }
   }
 
+  @Structure.FieldOrder({"status", "message"})
+  public static class VerifyResultByValue extends Structure implements Structure.ByValue {
+    public int status;            // 0 = OK, 1 = INVALID, 2 = ERROR
+    public String message;        // optional diagnostic string
+  }
+
   public interface P256VerifyLib extends Library {
     P256VerifyLib INSTANCE = Native.load("/Users/garyschulte/dev/besu-native/boringssl/boringssl_jni/libp256verify.dylib", P256VerifyLib.class);
 
-    int p256_verify_malleable_signature(
+    VerifyResultByValue p256_verify_malleable_signature(
         byte[] dataHash, int dataHashLength,
         byte[] signatureR, byte[] signatureS,
         byte[] publicKeyData);
