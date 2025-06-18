@@ -716,22 +716,22 @@ public class Benchmarks {
 
   public static void main(final String[] args) {
     logHeader();
-    benchSecp256k1Recover();
-    benchSha256();
-    benchKeccak256();
-    benchRipeMD();
-    benchBNADD();
-    benchBNMUL();
-    benchBNPairing();
-    benchModExp();
-    benchBLS12G1Add();
-    benchBLS12G1MultiExp();
-    benchBLS12G2Add();
-    benchBLS12G2MultiExp();
-    benchBLS12Pair();
-    benchBLS12MapFPTOG1();
-    benchBLS12MapFP2TOG2();
-    benchKZGPointEval();
+//    benchSecp256k1Recover();
+//    benchSha256();
+//    benchKeccak256();
+//    benchRipeMD();
+//    benchBNADD();
+//    benchBNMUL();
+//    benchBNPairing();
+//    benchModExp();
+//    benchBLS12G1Add();
+//    benchBLS12G1MultiExp();
+//    benchBLS12G2Add();
+//    benchBLS12G2MultiExp();
+//    benchBLS12Pair();
+//    benchBLS12MapFPTOG1();
+//    benchBLS12MapFP2TOG2();
+//    benchKZGPointEval();
     benchSecp256r1Verify();
   }
 }
