@@ -14,30 +14,23 @@
  */
 package org.hyperledger.besu.evm.precompile;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Structure;
-import org.hyperledger.besu.crypto.SECP256R1;
-import org.hyperledger.besu.crypto.SECPPublicKey;
-import org.hyperledger.besu.crypto.SECPSignature;
-import org.hyperledger.besu.crypto.SignatureAlgorithm;
-import org.hyperledger.besu.evm.frame.MessageFrame;
-import org.hyperledger.besu.evm.gascalculator.GasCalculator;
-
-import java.math.BigInteger;
-import java.util.Arrays;
-import java.util.List;
-
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.asn1.x9.X9ECParameters;
-import org.hyperledger.besu.nativelib.secp256r1.LibSECP256R1;
-import org.hyperledger.besu.nativelib.secp256r1.besuNativeEC.VerifyResult;
+import org.hyperledger.besu.crypto.SECP256R1;
+import org.hyperledger.besu.crypto.SignatureAlgorithm;
+import org.hyperledger.besu.evm.frame.MessageFrame;
+import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.math.BigInteger;
 
 /** Implementation of EIP-7951. */
 public class P256VerifyPrecompiledContract extends AbstractPrecompiledContract {
@@ -46,16 +39,7 @@ public class P256VerifyPrecompiledContract extends AbstractPrecompiledContract {
   private static final Bytes32 VALID = Bytes32.leftPad(Bytes.of(1), (byte) 0);
   private static final Bytes INVALID = Bytes.EMPTY;
 
-  private static final X9ECParameters R1_PARAMS = SECNamedCurves.getByName("secp256r1");
-  private static final BigInteger N = R1_PARAMS.getN();
-  private static final BigInteger N2 = R1_PARAMS.getN().divide(BigInteger.TWO);
-
-  private static final BigInteger P = R1_PARAMS.getCurve().getField().getCharacteristic();
-
   private final GasCalculator gasCalculator;
-  //private final SignatureAlgorithm signatureAlgorithm;
-  // temp use native direct:
-//  private static final LibSECP256R1 libSECP256R1 = new LibSECP256R1();
 
   private static final Cache<Integer, PrecompileInputResultTuple> p256VerifyCache =
       Caffeine.newBuilder().maximumSize(1000).build();
@@ -73,7 +57,6 @@ public class P256VerifyPrecompiledContract extends AbstractPrecompiledContract {
       final GasCalculator gasCalculator, final SignatureAlgorithm signatureAlgorithm) {
     super(PRECOMPILE_NAME, gasCalculator);
     this.gasCalculator = gasCalculator;
-    //this.signatureAlgorithm = signatureAlgorithm;
   }
 
   @Override
@@ -118,47 +101,8 @@ public class P256VerifyPrecompiledContract extends AbstractPrecompiledContract {
     final Bytes rBytes = input.slice(32, 32);
     final Bytes sBytes = input.slice(64, 32);
     final Bytes pubKeyBytes = input.slice(96, 64);
-    final BigInteger qx = pubKeyBytes.slice(0, 32).toUnsignedBigInteger();
-    final BigInteger qy = pubKeyBytes.slice(32, 32).toUnsignedBigInteger();
 
     try {
-      // Convert r and s to BigIntegers (unsigned)
-      final BigInteger r = rBytes.toUnsignedBigInteger();
-      BigInteger s = sBytes.toUnsignedBigInteger();
-
-      // Check r, s in (0, n)
-      if (r.signum() <= 0 || r.compareTo(N) >= 0 || s.signum() <= 0 || s.compareTo(N) >= 0) {
-        LOG.trace("Invalid r or s: must satisfy 0 < r,s < n");
-        res =
-            new PrecompileInputResultTuple(
-                enableResultCaching ? input.copy() : input,
-                PrecompileContractResult.success(INVALID));
-      }
-
-      if (s.compareTo(N2) > 0) {
-        // mathematically equivalent version of malleable signature:
-//        System.err.println("s > n/2, rewriting s");
-        s = N.subtract(s);
-      }
-
-      // Check qx, qy in [0, p)
-      if (qx.signum() < 0 || qx.compareTo(P) >= 0 || qy.signum() < 0 || qy.compareTo(P) >= 0) {
-        LOG.trace("Invalid qx or qy: must satisfy 0 <= qx,qy < p");
-        res =
-            new PrecompileInputResultTuple(
-                enableResultCaching ? input.copy() : input,
-                PrecompileContractResult.success(INVALID));
-      }
-
-      // Check point not at infinity (qx, qy ≠ 0,0), and non-trivial infinity encoding
-      if ((qx.signum() == 0 && qy.signum() == 0)) {
-        LOG.trace("Invalid public key: point at infinity");
-        res =
-            new PrecompileInputResultTuple(
-                enableResultCaching ? input.copy() : input,
-                PrecompileContractResult.success(INVALID));
-      }
-
       if (res == null) {
 //        // Create the signature; recID is not used in verification - use 0
 //        final SECPSignature signature = signatureAlgorithm.createSignature(r, s, (byte) 0);
