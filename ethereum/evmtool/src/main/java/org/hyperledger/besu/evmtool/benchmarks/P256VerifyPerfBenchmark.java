@@ -14,17 +14,17 @@
  */
 package org.hyperledger.besu.evmtool.benchmarks;
 
+import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.SECP256R1;
+import org.hyperledger.besu.evm.precompile.P256VerifyPerfPrecompiledContract;
 import org.hyperledger.besu.evm.precompile.P256VerifyPrecompiledContract;
 
 import java.io.PrintStream;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.apache.tuweni.bytes.Bytes;
-
 /** Benchmark P256Verify precompile (ECDSA key extraction + keccak hash) */
-public class P256VerifyBenchmark extends BenchmarkExecutor {
+public class P256VerifyPerfBenchmark extends BenchmarkExecutor {
 
   /**
    * Use default math based warmup and interations
@@ -32,7 +32,7 @@ public class P256VerifyBenchmark extends BenchmarkExecutor {
    * @param output where to write the stats.
    * @param benchmarkConfig benchmark configurations.
    */
-  public P256VerifyBenchmark(final PrintStream output, final BenchmarkConfig benchmarkConfig) {
+  public P256VerifyPerfBenchmark(final PrintStream output, final BenchmarkConfig benchmarkConfig) {
     super(MATH_WARMUP, MATH_ITERATIONS, output, benchmarkConfig);
   }
 
@@ -3152,14 +3152,10 @@ public class P256VerifyBenchmark extends BenchmarkExecutor {
         Bytes.fromHexString(
             "0x2f77668a9dfbf8d5848b9eeb4a7145ca94c6ed9236e4a773f6dcafa5132b2f9170bebe684cdcb5ca72a42f0d873879359bd1781a591809947628d313a3814f67aec03aca8f5587a4d535fa31027bbe9cc0e464b1c3577f4c2dcde6b2094798a9bcbb2914c79f045eaa6ecbbc612816b3be5d2d6796707d8125e9f851c18af015fffffffeecad44b6f05d15b33146549c2297b522a5eed8430cff596758e6c43d"));
 
-    final SECP256R1 signatureAlgorithm = new SECP256R1();
-    if (attemptNative != null && (!attemptNative || !signatureAlgorithm.maybeEnableNative())) {
-      signatureAlgorithm.disableNative();
-    }
-    output.println(signatureAlgorithm.isNative() ? "Native secp256r1" : "Java secp256r1");
+    output.println("Native p256Verify - PERF");
 
-    final P256VerifyPrecompiledContract contract =
-        new P256VerifyPrecompiledContract(gasCalculatorForFork(fork), signatureAlgorithm);
+    final P256VerifyPerfPrecompiledContract contract =
+        new P256VerifyPerfPrecompiledContract(gasCalculatorForFork(fork));
 
     warmIterations = warmIterations / testCases.size();
     execIterations = execIterations / testCases.size();
@@ -3171,7 +3167,7 @@ public class P256VerifyBenchmark extends BenchmarkExecutor {
     }
     execTime /= testCases.size();
     gasCost /= testCases.size();
-    logPrecompilePerformance("p256verify", gasCost, execTime);
+    logPrecompilePerformance("p256verifyPerf", gasCost, execTime);
   }
 
   @Override

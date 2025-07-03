@@ -47,6 +47,7 @@ dependencies {
   implementation 'org.hyperledger.besu:arithmetic'
   implementation 'org.hyperledger.besu:gnark'
   implementation 'org.hyperledger.besu:secp256k1'
+  implementation 'org.hyperledger.besu:boringssl'
   implementation 'io.consensys.protocols:jc-kzg-4844'
 
   compileOnly 'com.fasterxml.jackson.core:jackson-databind'
