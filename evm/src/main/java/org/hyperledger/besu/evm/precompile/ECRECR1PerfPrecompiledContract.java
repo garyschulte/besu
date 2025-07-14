@@ -14,12 +14,11 @@
  */
 package org.hyperledger.besu.evm.precompile;
 
-import static org.hyperledger.besu.nativelib.secp256k1.LibSecp256k1JNI.ECRecoverResult;
-
 import org.hyperledger.besu.crypto.Hash;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
-import org.hyperledger.besu.nativelib.secp256k1.LibSecp256k1JNI;
+import org.hyperledger.besu.nativelib.boringssl.BoringSSLPrecompiles;
+import org.hyperledger.besu.nativelib.boringssl.BoringSSLPrecompiles.ECRecoverResult;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -32,11 +31,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** The ECREC precompiled contract. */
-public class ECRECK1PerfPrecompiledContract extends AbstractPrecompiledContract {
+public class ECRECR1PerfPrecompiledContract extends AbstractPrecompiledContract {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ECRECK1PerfPrecompiledContract.class);
-  private static final int V_BASE = 27;
+  private static final Logger LOG = LoggerFactory.getLogger(ECRECR1PerfPrecompiledContract.class);
   private static final String PRECOMPILE_NAME = "ECREC";
+  private static final int V_BASE = 27;
   private static final Cache<Integer, PrecompileInputResultTuple> ecrecCache =
       Caffeine.newBuilder().maximumSize(1000).build();
 
@@ -45,7 +44,7 @@ public class ECRECK1PerfPrecompiledContract extends AbstractPrecompiledContract 
    *
    * @param gasCalculator the gas calculator
    */
-  public ECRECK1PerfPrecompiledContract(final GasCalculator gasCalculator) {
+  public ECRECR1PerfPrecompiledContract(final GasCalculator gasCalculator) {
     super(PRECOMPILE_NAME, gasCalculator);
   }
 
@@ -97,8 +96,8 @@ public class ECRECK1PerfPrecompiledContract extends AbstractPrecompiledContract 
 
     try {
       final ECRecoverResult ecres =
-          LibSecp256k1JNI.ecrecover(messageHash.toArrayUnsafe(), sigBytes, recId);
-      if (!(ecres.status() == 0)) {
+          BoringSSLPrecompiles.ecrecover(messageHash.toArrayUnsafe(), sigBytes, recId);
+      if (!(ecres.status() == 0) || ecres.publicKey().isEmpty()) {
         res =
             new PrecompileInputResultTuple(
                 enableResultCaching ? input.copy() : input,
@@ -109,7 +108,7 @@ public class ECRECK1PerfPrecompiledContract extends AbstractPrecompiledContract 
         return res.cachedResult();
       }
 
-      final Bytes32 hashed = Hash.keccak256(Bytes.wrap(ecres.publicKey().orElseThrow()));
+      final Bytes32 hashed = Hash.keccak256(Bytes.wrap(ecres.publicKey().get()));
       final MutableBytes32 result = MutableBytes32.create();
       hashed.slice(12).copyTo(result, 12);
       res =

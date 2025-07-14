@@ -14,20 +14,22 @@
  */
 package org.hyperledger.besu.evm.precompile;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.nativelib.boringssl.BoringSSLPrecompiles;
 import org.hyperledger.besu.nativelib.boringssl.BoringSSLPrecompiles.P256VerifyResult;
+
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Implementation of EIP-7951. */
 public class P256VerifyPerfPrecompiledContract extends AbstractPrecompiledContract {
-  private static final Logger LOG = LoggerFactory.getLogger(P256VerifyPerfPrecompiledContract.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(P256VerifyPerfPrecompiledContract.class);
   private static final String PRECOMPILE_NAME = "P256VERIFY";
   private static final Bytes32 VALID = Bytes32.leftPad(Bytes.of(1), (byte) 0);
   private static final Bytes INVALID = Bytes.EMPTY;
@@ -88,8 +90,8 @@ public class P256VerifyPerfPrecompiledContract extends AbstractPrecompiledContra
     try {
       if (res == null) {
 
-        P256VerifyResult result = BoringSSLPrecompiles
-            .p256Verify(input.toArrayUnsafe(), input.size());
+        P256VerifyResult result =
+            BoringSSLPrecompiles.p256Verify(input.toArrayUnsafe(), input.size());
 
         if (result.status != 0) {
           LOG.debug("Verify failed: " + result.error);

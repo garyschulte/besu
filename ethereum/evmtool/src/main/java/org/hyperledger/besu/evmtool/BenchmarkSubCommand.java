@@ -26,6 +26,8 @@ import org.hyperledger.besu.evmtool.benchmarks.BenchmarkConfig;
 import org.hyperledger.besu.evmtool.benchmarks.BenchmarkExecutor;
 import org.hyperledger.besu.evmtool.benchmarks.ECRecoverBenchmark;
 import org.hyperledger.besu.evmtool.benchmarks.ECRecoverPerfBenchmark;
+import org.hyperledger.besu.evmtool.benchmarks.ECRecoverR1Benchmark;
+import org.hyperledger.besu.evmtool.benchmarks.ECRecoverR1PerfBenchmark;
 import org.hyperledger.besu.evmtool.benchmarks.KZGPointEvalBenchmark;
 import org.hyperledger.besu.evmtool.benchmarks.ModExpBenchmark;
 import org.hyperledger.besu.evmtool.benchmarks.P256VerifyBenchmark;
@@ -71,6 +73,8 @@ public class BenchmarkSubCommand implements Runnable {
     // blake2f
     EcRecover(ECRecoverBenchmark::new),
     EcRecoverPerf(ECRecoverPerfBenchmark::new),
+    EcRecoverR1(ECRecoverR1Benchmark::new),
+    EcRecoverR1Perf(ECRecoverR1PerfBenchmark::new),
     ModExp(ModExpBenchmark::new),
     // bls12
     Bls12(BLS12Benchmark::new),

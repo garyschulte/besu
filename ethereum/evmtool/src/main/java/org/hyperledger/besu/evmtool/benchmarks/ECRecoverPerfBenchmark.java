@@ -15,9 +15,6 @@
 package org.hyperledger.besu.evmtool.benchmarks;
 
 import org.apache.tuweni.bytes.Bytes;
-import org.hyperledger.besu.crypto.SignatureAlgorithm;
-import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
-import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.evm.EvmSpecVersion;
 import org.hyperledger.besu.evm.fluent.EvmSpec;
 import org.hyperledger.besu.evm.precompile.ECRECK1PerfPrecompiledContract;
@@ -465,7 +462,7 @@ public class ECRecoverPerfBenchmark extends BenchmarkExecutor {
     }
     execTime /= testCases.size();
     gasCost /= testCases.size();
-    logPrecompilePerformance("ecrecoverPerf", gasCost, execTime);
+    logPrecompilePerformance("ecrecover_perf", gasCost, execTime);
   }
 
   @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright Hyperledger Besu contributors.
+ * Copyright contributors to Besu.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -12,13 +12,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
 package org.hyperledger.besu.evm.precompile;
-
-import org.apache.tuweni.bytes.Bytes;
-import org.apache.tuweni.units.bigints.UInt256;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.util.encoders.Hex;
 
 import java.math.BigInteger;
 import java.security.KeyPair;
@@ -30,23 +24,27 @@ import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECGenParameterSpec;
 
+import org.apache.tuweni.bytes.Bytes;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.util.encoders.Hex;
+
 public class GenR1TestCase {
 
   static SecureRandom random;
   static final BigInteger ORDER =
-      new BigInteger(1, Hex.decodeStrict("FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551"));
-
+      new BigInteger(
+          1, Hex.decodeStrict("FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551"));
 
   public static void main(final String[] args) throws Exception {
     random = SecureRandom.getInstanceStrong();
-    for (int i =0; i<20;i++) {
+    for (int i = 0; i < 20; i++) {
       blah(i);
     }
   }
+
   public static void blah(final int i) throws Exception {
     // Add BouncyCastle provider
     Security.addProvider(new BouncyCastleProvider());
-
 
     // Generate random 32-byte message hash
     byte[] messageHash = new byte[32];
@@ -77,25 +75,25 @@ public class GenR1TestCase {
     BigInteger x = pubKeyPoint.getAffineX();
     BigInteger y = pubKeyPoint.getAffineY();
 
-    //var malleatedSignatureS = ORDER.subtract(s);
+    // var malleatedSignatureS = ORDER.subtract(s);
 
-    //System.out.printf("%s,%s,%s,%s%s,0,,malleated but valid signature %d\n",
-    System.out.printf("%s0000000000000000000000000000000000000000000000000000000000000001%s%s,04%s%s,,valid signature %d\n",
+    // System.out.printf("%s,%s,%s,%s%s,0,,malleated but valid signature %d\n",
+    System.out.printf(
+        "%s0000000000000000000000000000000000000000000000000000000000000001%s%s,04%s%s,1,wrong recovery id %d\n",
         Bytes.of(messageHash).toUnprefixedHexString(),
         safeBigIntTo32bytes(r),
         safeBigIntTo32bytes(s),
-        //safeBigIntTo32bytes(malleatedSignatureS),
+        // safeBigIntTo32bytes(malleatedSignatureS),
         safeBigIntTo32bytes(x),
         safeBigIntTo32bytes(y),
-        i
-    );
+        i);
   }
 
   private static String safeBigIntTo32bytes(final BigInteger bigint) {
     var bytesVal = Bytes.of(bigint.toByteArray());
-    return bytesVal.size() > 32 ?
-        bytesVal.slice(1,32).toUnprefixedHexString() :
-        bytesVal.toUnprefixedHexString();
+    return bytesVal.size() > 32
+        ? bytesVal.slice(1, 32).toUnprefixedHexString()
+        : bytesVal.toUnprefixedHexString();
   }
 
   private static BigInteger[] parseDERSignature(final byte[] derSignature) {
@@ -128,6 +126,6 @@ public class GenR1TestCase {
     System.arraycopy(derSignature, offset, sBytes, 0, sLength);
     BigInteger s = new BigInteger(1, sBytes);
 
-    return new BigInteger[]{r, s};
+    return new BigInteger[] {r, s};
   }
 }
