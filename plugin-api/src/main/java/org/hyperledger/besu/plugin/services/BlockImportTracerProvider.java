@@ -27,5 +27,17 @@ public interface BlockImportTracerProvider extends BesuService {
    * @param blockHeader header of the block which will be imported
    * @return the block aware operation tracer
    */
-  BlockAwareOperationTracer getBlockImportTracer(BlockHeader blockHeader);
+  BlockAwareOperationTracer getBlockImportTracer(final BlockHeader blockHeader);
+
+  /**
+   * Release BlockAwareOperationTracer as complete. For implementations which require tracer
+   * cleanup, this method lets us mark a tracer as safe to release.
+   *
+   * @param tracer to market complete
+   * @param header for which the tracer was used
+   */
+  default void releaseBlockImportTracer(
+      final BlockAwareOperationTracer tracer, final BlockHeader header) {
+    // no-op by default.
+  }
 }

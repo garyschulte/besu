@@ -106,7 +106,18 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
 
   private BlockAwareOperationTracer getBlockImportTracer(
       final ProtocolContext protocolContext, final BlockHeader header) {
+    return getBlockImportTracerProvider(protocolContext).getBlockImportTracer(header);
+  }
 
+  private void releaseBlockImportTracer(
+      final ProtocolContext protocolContext,
+      final BlockAwareOperationTracer tracer,
+      final BlockHeader header) {
+    getBlockImportTracerProvider(protocolContext).releaseBlockImportTracer(tracer, header);
+  }
+
+  private BlockImportTracerProvider getBlockImportTracerProvider(
+      final ProtocolContext protocolContext) {
     if (blockImportTracerProvider == null) {
       // fetch from context once, and keep.
       blockImportTracerProvider =
@@ -123,8 +134,7 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
                     return BlockAwareOperationTracer.NO_TRACING;
                   });
     }
-
-    return blockImportTracerProvider.getBlockImportTracer(header);
+    return blockImportTracerProvider;
   }
 
   /**
@@ -460,6 +470,7 @@ public abstract class AbstractBlockProcessor implements BlockProcessor {
                   worldState, receipts, maybeRequests, maybeBlockAccessList)),
           parallelizedTxFound ? Optional.of(nbParallelTx) : Optional.empty());
     } finally {
+      releaseBlockImportTracer(protocolContext, blockTracer, blockHeader);
       stateRootCommitter.cancel();
     }
   }
