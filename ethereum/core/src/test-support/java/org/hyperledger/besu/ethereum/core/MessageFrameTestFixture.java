@@ -23,6 +23,7 @@ import org.hyperledger.besu.ethereum.mainnet.ProtocolSpec;
 import org.hyperledger.besu.evm.Code;
 import org.hyperledger.besu.evm.blockhash.BlockHashLookup;
 import org.hyperledger.besu.evm.code.CodeV0;
+import org.hyperledger.besu.evm.frame.IMessageFrame;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.worldstate.WorldUpdater;
 
@@ -39,7 +40,7 @@ public class MessageFrameTestFixture {
   private static final int maxStackSize = DEFAULT_MAX_STACK_SIZE;
 
   private MessageFrame parentFrame;
-  private MessageFrame.Type type = MessageFrame.Type.MESSAGE_CALL;
+  private IMessageFrame.Type type = IMessageFrame.Type.MESSAGE_CALL;
   private Optional<Blockchain> blockchain = Optional.empty();
   private Optional<WorldUpdater> worldUpdater = Optional.empty();
   private long initialGas = Long.MAX_VALUE;
@@ -62,7 +63,7 @@ public class MessageFrameTestFixture {
     return this;
   }
 
-  public MessageFrameTestFixture type(final MessageFrame.Type type) {
+  public MessageFrameTestFixture type(final IMessageFrame.Type type) {
     this.type = type;
     return this;
   }

@@ -23,7 +23,7 @@ import org.hyperledger.besu.evm.code.CodeFactory;
 import org.hyperledger.besu.evm.code.EOFLayout;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
-import org.hyperledger.besu.evm.frame.MessageFrame.State;
+import org.hyperledger.besu.evm.frame.IMessageFrame.State;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.internal.EvmConfiguration;
 import org.hyperledger.besu.evm.internal.JumpDestOnlyCodeCache;

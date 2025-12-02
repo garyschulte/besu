@@ -15,6 +15,7 @@
 package org.hyperledger.besu.evm.precompile;
 
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
+import org.hyperledger.besu.evm.frame.IMessageFrame;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 
 import java.util.Optional;
@@ -69,7 +70,7 @@ public interface PrecompiledContract {
   record PrecompileContractResult(
       Bytes output,
       boolean isRefundGas,
-      MessageFrame.State state,
+      IMessageFrame.State state,
       Optional<ExceptionalHaltReason> haltReason) {
 
     /**

@@ -40,6 +40,7 @@ import org.hyperledger.besu.evm.blockhash.BlockHashLookup;
 import org.hyperledger.besu.evm.code.CodeInvalid;
 import org.hyperledger.besu.evm.code.CodeV0;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
+import org.hyperledger.besu.evm.frame.IMessageFrame;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.hyperledger.besu.evm.processor.AbstractMessageProcessor;
@@ -347,7 +348,7 @@ public class MainnetTransactionProcessor {
         Code code = contractCreationProcessor.wrapCodeForCreation(initCodeBytes);
         initialFrame =
             commonMessageFrameBuilder
-                .type(MessageFrame.Type.CONTRACT_CREATION)
+                .type(IMessageFrame.Type.CONTRACT_CREATION)
                 .address(contractAddress)
                 .contract(contractAddress)
                 .inputData(initCodeBytes.slice(code.getSize()))
@@ -364,7 +365,7 @@ public class MainnetTransactionProcessor {
 
         initialFrame =
             commonMessageFrameBuilder
-                .type(MessageFrame.Type.MESSAGE_CALL)
+                .type(IMessageFrame.Type.MESSAGE_CALL)
                 .address(to)
                 .contract(to)
                 .inputData(transaction.getPayload())
@@ -379,7 +380,7 @@ public class MainnetTransactionProcessor {
           process(messageFrameStack.peekFirst(), operationTracer);
         }
       } else {
-        initialFrame.setState(MessageFrame.State.EXCEPTIONAL_HALT);
+        initialFrame.setState(IMessageFrame.State.EXCEPTIONAL_HALT);
         initialFrame.setExceptionalHaltReason(Optional.of(ExceptionalHaltReason.INVALID_CODE));
         validationResult =
             ValidationResult.invalid(
@@ -387,7 +388,7 @@ public class MainnetTransactionProcessor {
                 ((CodeInvalid) initialFrame.getCode()).getInvalidReason());
       }
 
-      if (initialFrame.getState() == MessageFrame.State.COMPLETED_SUCCESS) {
+      if (initialFrame.getState() == IMessageFrame.State.COMPLETED_SUCCESS) {
         worldUpdater.commit();
       } else {
         if (initialFrame.getExceptionalHaltReason().isPresent()
@@ -469,7 +470,7 @@ public class MainnetTransactionProcessor {
       operationTracer.traceEndTransaction(
           worldState.updater(),
           transaction,
-          initialFrame.getState() == MessageFrame.State.COMPLETED_SUCCESS,
+          initialFrame.getState() == IMessageFrame.State.COMPLETED_SUCCESS,
           initialFrame.getOutputData(),
           initialFrame.getLogs(),
           gasUsedByTransaction,
@@ -485,7 +486,7 @@ public class MainnetTransactionProcessor {
       final Optional<PartialBlockAccessView> partialBlockAccessView =
           accessLocationTracker.map(tracker -> tracker.createPartialBlockAccessView(worldState));
 
-      if (initialFrame.getState() == MessageFrame.State.COMPLETED_SUCCESS) {
+      if (initialFrame.getState() == IMessageFrame.State.COMPLETED_SUCCESS) {
         return TransactionProcessingResult.successful(
             initialFrame.getLogs(),
             gasUsedByTransaction,
@@ -562,7 +563,7 @@ public class MainnetTransactionProcessor {
     executor.process(frame, operationTracer);
   }
 
-  public AbstractMessageProcessor getMessageProcessor(final MessageFrame.Type type) {
+  public AbstractMessageProcessor getMessageProcessor(final IMessageFrame.Type type) {
     return switch (type) {
       case MESSAGE_CALL -> messageCallProcessor;
       case CONTRACT_CREATION -> contractCreationProcessor;

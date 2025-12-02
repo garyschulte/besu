@@ -25,6 +25,7 @@ import org.hyperledger.besu.evm.EvmSpecVersion;
 import org.hyperledger.besu.evm.blockhash.BlockHashLookup;
 import org.hyperledger.besu.evm.code.CodeV0;
 import org.hyperledger.besu.evm.frame.BlockValues;
+import org.hyperledger.besu.evm.frame.IMessageFrame;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.processor.ContractCreationProcessor;
 import org.hyperledger.besu.evm.processor.MessageCallProcessor;
@@ -65,7 +66,7 @@ public class EVMExecutor {
   private Multimap<Address, Bytes32> accessListWarmStorage = HashMultimap.create();
   private MessageCallProcessor messageCallProcessor = null;
   private ContractCreationProcessor contractCreationProcessor = null;
-  private MessageFrame.Type messageFrameType = MessageFrame.Type.MESSAGE_CALL;
+  private IMessageFrame.Type messageFrameType = IMessageFrame.Type.MESSAGE_CALL;
   private final EvmSpec evmSpec;
 
   /**
@@ -557,7 +558,7 @@ public class EVMExecutor {
    * @param messageFrameType message frame type
    * @return the builder
    */
-  public EVMExecutor messageFrameType(final MessageFrame.Type messageFrameType) {
+  public EVMExecutor messageFrameType(final IMessageFrame.Type messageFrameType) {
     this.messageFrameType = messageFrameType;
     return this;
   }

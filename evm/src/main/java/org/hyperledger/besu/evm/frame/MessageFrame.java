@@ -78,7 +78,7 @@ import org.apache.tuweni.units.bigints.UInt256;
  * <p>A contract creation, as its name suggests, creates contract accounts. Contract initialization
  * code and a value are supplied to initialize the contract account code and balance, respectively.
  */
-public class MessageFrame {
+public class MessageFrame implements IMessageFrame {
 
   /**
    * Message Frame State.
@@ -159,42 +159,6 @@ public class MessageFrame {
    * <p>The message execution completed successfully and needs to finalized and propagated to the
    * parent message that spawned it.
    */
-  public enum State {
-
-    /** Message execution has not started. */
-    NOT_STARTED,
-
-    /** Code execution within the message is in progress. */
-    CODE_EXECUTING,
-
-    /** Code execution within the message has finished successfully. */
-    CODE_SUCCESS,
-
-    /** Code execution within the message has been suspended. */
-    CODE_SUSPENDED,
-
-    /** An exceptional halting condition has occurred. */
-    EXCEPTIONAL_HALT,
-
-    /** State changes were reverted during execution. */
-    REVERT,
-
-    /** The message execution has failed to complete successfully. */
-    COMPLETED_FAILED,
-
-    /** The message execution has completed successfully. */
-    COMPLETED_SUCCESS,
-  }
-
-  /** The message type the frame corresponds to. */
-  public enum Type {
-
-    /** A Contract creation message. */
-    CONTRACT_CREATION,
-
-    /** A message call message. */
-    MESSAGE_CALL,
-  }
 
   /** The constant DEFAULT_MAX_STACK_SIZE. */
   public static final int DEFAULT_MAX_STACK_SIZE = 1024;
@@ -302,6 +266,7 @@ public class MessageFrame {
    *
    * @return the program counter
    */
+  @Override
   public int getPC() {
     return pc;
   }
@@ -311,6 +276,7 @@ public class MessageFrame {
    *
    * @param pc The new program counter value
    */
+  @Override
   public void setPC(final int pc) {
     this.pc = pc;
   }
@@ -320,6 +286,7 @@ public class MessageFrame {
    *
    * @param section the code section index
    */
+  @Override
   public void setSection(final int section) {
     this.section = section;
   }
@@ -329,11 +296,13 @@ public class MessageFrame {
    *
    * @return the current code section
    */
+  @Override
   public int getSection() {
     return section;
   }
 
   /** Deducts the remaining gas. */
+  @Override
   public void clearGasRemaining() {
     this.gasRemaining = 0L;
   }
@@ -344,6 +313,7 @@ public class MessageFrame {
    * @param amount The amount of gas to deduct
    * @return the amount of gas available, after deductions.
    */
+  @Override
   public long decrementRemainingGas(final long amount) {
     this.gasRemaining -= amount;
     return this.gasRemaining;
@@ -354,6 +324,7 @@ public class MessageFrame {
    *
    * @return the amount of remaining gas
    */
+  @Override
   public long getRemainingGas() {
     return gasRemaining;
   }
@@ -363,6 +334,7 @@ public class MessageFrame {
    *
    * @param amount The amount of gas to increment
    */
+  @Override
   public void incrementRemainingGas(final long amount) {
     this.gasRemaining += amount;
   }
@@ -372,6 +344,7 @@ public class MessageFrame {
    *
    * @param amount The amount of remaining gas
    */
+  @Override
   public void setGasRemaining(final long amount) {
     this.gasRemaining = amount;
   }
@@ -381,6 +354,7 @@ public class MessageFrame {
    *
    * @return the output data
    */
+  @Override
   public Bytes getOutputData() {
     return output;
   }
@@ -390,6 +364,7 @@ public class MessageFrame {
    *
    * @param output The output data
    */
+  @Override
   public void setOutputData(final Bytes output) {
     this.output = output;
   }
@@ -399,6 +374,7 @@ public class MessageFrame {
    *
    * @param createdCode the code that was created
    */
+  @Override
   public void setCreatedCode(final Code createdCode) {
     this.createdCode = createdCode;
   }
@@ -408,11 +384,13 @@ public class MessageFrame {
    *
    * @return the code that was created
    */
+  @Override
   public Code getCreatedCode() {
     return createdCode;
   }
 
   /** Clears the output data buffer. */
+  @Override
   public void clearOutputData() {
     setOutputData(Bytes.EMPTY);
   }
@@ -422,6 +400,7 @@ public class MessageFrame {
    *
    * @return the return data
    */
+  @Override
   public Bytes getReturnData() {
     return returnData;
   }
@@ -431,11 +410,13 @@ public class MessageFrame {
    *
    * @param returnData The return data
    */
+  @Override
   public void setReturnData(final Bytes returnData) {
     this.returnData = returnData;
   }
 
   /** Clear the return data buffer. */
+  @Override
   public void clearReturnData() {
     setReturnData(Bytes.EMPTY);
   }
@@ -447,6 +428,7 @@ public class MessageFrame {
    * @return The item at the specified offset in the stack
    * @throws UnderflowException if the offset is out of range
    */
+  @Override
   public Bytes getStackItem(final int offset) {
     return stack.get(offset);
   }
@@ -457,6 +439,7 @@ public class MessageFrame {
    * @return the item at the top of the stack
    * @throws UnderflowException if the stack is empty
    */
+  @Override
   public Bytes popStackItem() {
     return stack.pop();
   }
@@ -466,6 +449,7 @@ public class MessageFrame {
    *
    * @param n The number of items to pop off the stack
    */
+  @Override
   public void popStackItems(final int n) {
     stack.bulkPop(n);
   }
@@ -475,6 +459,7 @@ public class MessageFrame {
    *
    * @param value The value to push onto the stack.
    */
+  @Override
   public void pushStackItem(final Bytes value) {
     stack.push(value);
   }
@@ -486,6 +471,7 @@ public class MessageFrame {
    * @param value The value to set the stack item to
    * @throws IllegalStateException if the stack is too small
    */
+  @Override
   public void setStackItem(final int offset, final Bytes value) {
     stack.set(offset, value);
   }
@@ -495,6 +481,7 @@ public class MessageFrame {
    *
    * @return The current stack size
    */
+  @Override
   public int stackSize() {
     return stack.size();
   }
@@ -504,6 +491,7 @@ public class MessageFrame {
    *
    * @return The current return stack size
    */
+  @Override
   public int returnStackSize() {
     return returnStack.get().size();
   }
@@ -513,6 +501,7 @@ public class MessageFrame {
    *
    * @return The top item of the return stack, or null if the stack is empty
    */
+  @Override
   public ReturnStack.ReturnStackItem peekReturnStack() {
     return returnStack.get().peek();
   }
@@ -522,6 +511,7 @@ public class MessageFrame {
    *
    * @param returnStackItem item to be pushed
    */
+  @Override
   public void pushReturnStackItem(final ReturnStack.ReturnStackItem returnStackItem) {
     returnStack.get().push(returnStackItem);
   }
@@ -531,6 +521,7 @@ public class MessageFrame {
    *
    * @return {@code} true if the frame is static; otherwise {@code false}
    */
+  @Override
   public boolean isStatic() {
     return isStatic;
   }
@@ -542,6 +533,7 @@ public class MessageFrame {
    * @param length The length of the memory access
    * @return the memory size for specified memory access
    */
+  @Override
   public long calculateMemoryExpansion(final long offset, final long length) {
     return memory.calculateNewActiveWords(offset, length);
   }
@@ -552,6 +544,7 @@ public class MessageFrame {
    * @param offset The offset in memory
    * @param length The length of the memory access
    */
+  @Override
   public void expandMemory(final long offset, final long length) {
     memory.ensureCapacityForBytes(offset, length);
   }
@@ -561,6 +554,7 @@ public class MessageFrame {
    *
    * @return the number of bytes in memory
    */
+  @Override
   public long memoryByteSize() {
     return memory.getActiveBytes();
   }
@@ -570,6 +564,7 @@ public class MessageFrame {
    *
    * @return the number of words in memory
    */
+  @Override
   public int memoryWordSize() {
     return memory.getActiveWords();
   }
@@ -579,6 +574,7 @@ public class MessageFrame {
    *
    * @return the revertReason string
    */
+  @Override
   public Optional<Bytes> getRevertReason() {
     return revertReason;
   }
@@ -588,6 +584,7 @@ public class MessageFrame {
    *
    * @param revertReason the revert reason
    */
+  @Override
   public void setRevertReason(final Bytes revertReason) {
     this.revertReason = Optional.ofNullable(revertReason);
   }
@@ -600,6 +597,7 @@ public class MessageFrame {
    * @param length The length of the bytes to read
    * @return The bytes in the specified range
    */
+  @Override
   public MutableBytes readMutableMemory(final long offset, final long length) {
     return readMutableMemory(offset, length, false);
   }
@@ -611,6 +609,7 @@ public class MessageFrame {
    * @param length The length of the bytes to read
    * @return The bytes in the specified range
    */
+  @Override
   public Bytes shadowReadMemory(final long offset, final long length) {
     return memory.getBytesWithoutGrowth(offset, length);
   }
@@ -622,6 +621,7 @@ public class MessageFrame {
    * @param length The length of the bytes to read
    * @return The bytes in the specified range
    */
+  @Override
   public Bytes readMemory(final long offset, final long length) {
     return readMutableMemory(offset, length, false).copy();
   }
@@ -635,6 +635,7 @@ public class MessageFrame {
    * @param explicitMemoryRead true if triggered by a memory opcode, false otherwise
    * @return The bytes in the specified range
    */
+  @Override
   public MutableBytes readMutableMemory(
       final long offset, final long length, final boolean explicitMemoryRead) {
     final MutableBytes memBytes = memory.getMutableBytes(offset, length);
@@ -651,6 +652,7 @@ public class MessageFrame {
    * @param value The value to set in memory
    * @param explicitMemoryUpdate true if triggered by a memory opcode, false otherwise
    */
+  @Override
   public void writeMemory(final long offset, final byte value, final boolean explicitMemoryUpdate) {
     memory.setByte(offset, value);
     if (explicitMemoryUpdate) {
@@ -665,6 +667,7 @@ public class MessageFrame {
    * @param length The length of the bytes to write
    * @param value The value to write
    */
+  @Override
   public void writeMemory(final long offset, final long length, final Bytes value) {
     writeMemory(offset, length, value, false);
   }
@@ -677,6 +680,7 @@ public class MessageFrame {
    * @param value The value to write
    * @param explicitMemoryUpdate true if triggered by a memory opcode, false otherwise
    */
+  @Override
   public void writeMemory(
       final long offset, final long length, final Bytes value, final boolean explicitMemoryUpdate) {
     memory.setBytes(offset, length, value);
@@ -695,6 +699,7 @@ public class MessageFrame {
    * @param value The value to write
    * @param explicitMemoryUpdate true if triggered by a memory opcode, false otherwise
    */
+  @Override
   public void writeMemoryRightAligned(
       final long offset, final long length, final Bytes value, final boolean explicitMemoryUpdate) {
     memory.setBytesRightAligned(offset, length, value);
@@ -711,6 +716,7 @@ public class MessageFrame {
    * @param length The length of the bytes to write
    * @param value The value to write
    */
+  @Override
   public void writeMemory(
       final long offset, final long sourceOffset, final long length, final Bytes value) {
     writeMemory(offset, sourceOffset, length, value, false);
@@ -725,6 +731,7 @@ public class MessageFrame {
    * @param value The value to write
    * @param explicitMemoryUpdate true if triggered by a memory opcode, false otherwise
    */
+  @Override
   public void writeMemory(
       final long offset,
       final long sourceOffset,
@@ -747,6 +754,7 @@ public class MessageFrame {
    * @param length the number of bytes to copy
    * @param explicitMemoryUpdate true if triggered by a memory opcode, false otherwise
    */
+  @Override
   public void copyMemory(
       final long dst, final long src, final long length, final boolean explicitMemoryUpdate) {
     if (length > 0) {
@@ -800,6 +808,7 @@ public class MessageFrame {
    * @param storageAddress the storage address
    * @param value the value
    */
+  @Override
   public void storageWasUpdated(final UInt256 storageAddress, final Bytes value) {
     maybeUpdatedStorage = Optional.of(new StorageEntry(storageAddress, value));
   }
@@ -809,6 +818,7 @@ public class MessageFrame {
    *
    * @param log The log to accumulate
    */
+  @Override
   public void addLog(final Log log) {
     logs.add(log);
   }
@@ -818,11 +828,13 @@ public class MessageFrame {
    *
    * @param logs The logs to accumulate
    */
+  @Override
   public void addLogs(final List<Log> logs) {
     this.logs.addAll(logs);
   }
 
   /** Clear the accumulated logs. */
+  @Override
   public void clearLogs() {
     logs.clear();
   }
@@ -832,6 +844,7 @@ public class MessageFrame {
    *
    * @return the accumulated logs
    */
+  @Override
   public List<Log> getLogs() {
     return logs;
   }
@@ -841,11 +854,13 @@ public class MessageFrame {
    *
    * @param amount The amount to increment the refund
    */
+  @Override
   public void incrementGasRefund(final long amount) {
     this.txValues.gasRefunds().set(this.txValues.gasRefunds().get() + amount);
   }
 
   /** Clear the accumulated gas refund. */
+  @Override
   public void clearGasRefund() {
     this.txValues.gasRefunds().set(0L);
   }
@@ -855,6 +870,7 @@ public class MessageFrame {
    *
    * @return accumulated gas refund
    */
+  @Override
   public long getGasRefund() {
     return txValues.gasRefunds().get();
   }
@@ -864,6 +880,7 @@ public class MessageFrame {
    *
    * @param address The recipient to self-destruct
    */
+  @Override
   public void addSelfDestruct(final Address address) {
     txValues.selfDestructs().add(address);
   }
@@ -873,6 +890,7 @@ public class MessageFrame {
    *
    * @param addresses The addresses to self-destruct
    */
+  @Override
   public void addSelfDestructs(final Set<Address> addresses) {
     txValues.selfDestructs().addAll(addresses);
   }
@@ -882,6 +900,7 @@ public class MessageFrame {
    *
    * @return the self-destruct set
    */
+  @Override
   public Set<Address> getSelfDestructs() {
     return txValues.selfDestructs();
   }
@@ -891,6 +910,7 @@ public class MessageFrame {
    *
    * @param address The recipient to create
    */
+  @Override
   public void addCreate(final Address address) {
     txValues.creates().add(address);
   }
@@ -900,6 +920,7 @@ public class MessageFrame {
    *
    * @param addresses The addresses to create
    */
+  @Override
   public void addCreates(final Set<Address> addresses) {
     txValues.creates().addAll(addresses);
   }
@@ -909,6 +930,7 @@ public class MessageFrame {
    *
    * @return the create set
    */
+  @Override
   public Set<Address> getCreates() {
     return txValues.creates();
   }
@@ -922,6 +944,7 @@ public class MessageFrame {
    *     transaction. False if the account existed in the world state at the beginning of the
    *     transaction.
    */
+  @Override
   public boolean wasCreatedInTransaction(final Address address) {
     return txValues.creates().contains((address));
   }
@@ -932,6 +955,7 @@ public class MessageFrame {
    * @param beneficiary the beneficiary of the refund.
    * @param amount the amount of the refund.
    */
+  @Override
   public void addRefund(final Address beneficiary, final Wei amount) {
     refunds.put(beneficiary, amount);
   }
@@ -941,6 +965,7 @@ public class MessageFrame {
    *
    * @return the refunds map
    */
+  @Override
   public Map<Address, Wei> getRefunds() {
     return refunds;
   }
@@ -951,6 +976,7 @@ public class MessageFrame {
    * @param address the address to warm up
    * @return true if the address was already warmed up
    */
+  @Override
   public boolean warmUpAddress(final Address address) {
     return !txValues.warmedUpAddresses().add(address);
   }
@@ -962,6 +988,7 @@ public class MessageFrame {
    * @param address the address context
    * @return whether the address has been warmed up
    */
+  @Override
   public boolean isAddressWarm(final Address address) {
     return txValues.warmedUpAddresses().contains(address);
   }
@@ -973,6 +1000,7 @@ public class MessageFrame {
    * @param slot the slot being warmed up
    * @return true if the storage slot was already warmed up
    */
+  @Override
   public boolean warmUpStorage(final Address address, final Bytes32 slot) {
     return txValues.warmedUpStorage().put(address, slot, Boolean.TRUE) != null;
   }
@@ -982,6 +1010,7 @@ public class MessageFrame {
    *
    * @return the world state
    */
+  @Override
   public WorldUpdater getWorldUpdater() {
     return worldUpdater;
   }
@@ -991,6 +1020,7 @@ public class MessageFrame {
    *
    * @return the message frame type
    */
+  @Override
   public Type getType() {
     return type;
   }
@@ -1000,6 +1030,7 @@ public class MessageFrame {
    *
    * @return the current execution state
    */
+  @Override
   public State getState() {
     return state;
   }
@@ -1009,6 +1040,7 @@ public class MessageFrame {
    *
    * @param state The new execution state
    */
+  @Override
   public void setState(final State state) {
     this.state = state;
   }
@@ -1018,6 +1050,7 @@ public class MessageFrame {
    *
    * @return the code currently being executed
    */
+  @Override
   public Code getCode() {
     return code;
   }
@@ -1027,6 +1060,7 @@ public class MessageFrame {
    *
    * @return the current input data
    */
+  @Override
   public Bytes getInputData() {
     return inputData;
   }
@@ -1036,6 +1070,7 @@ public class MessageFrame {
    *
    * @return the callee account recipient
    */
+  @Override
   public Address getRecipientAddress() {
     return recipient;
   }
@@ -1045,6 +1080,7 @@ public class MessageFrame {
    *
    * @return the message stack size
    */
+  @Override
   public int getMessageStackSize() {
     return txValues.messageFrameStack().size();
   }
@@ -1054,6 +1090,7 @@ public class MessageFrame {
    *
    * @return the call depth
    */
+  @Override
   public int getDepth() {
     return getMessageStackSize() - 1;
   }
@@ -1063,6 +1100,7 @@ public class MessageFrame {
    *
    * @return the recipient that originated the message
    */
+  @Override
   public Address getOriginatorAddress() {
     return txValues.originator();
   }
@@ -1072,6 +1110,7 @@ public class MessageFrame {
    *
    * @return the recipient of the code currently executing
    */
+  @Override
   public Address getContractAddress() {
     return contract;
   }
@@ -1081,6 +1120,7 @@ public class MessageFrame {
    *
    * @return the current gas price
    */
+  @Override
   public Wei getGasPrice() {
     return txValues.gasPrice();
   }
@@ -1090,6 +1130,7 @@ public class MessageFrame {
    *
    * @return the current blob gas price
    */
+  @Override
   public Wei getBlobGasPrice() {
     return txValues.blobGasPrice();
   }
@@ -1099,6 +1140,7 @@ public class MessageFrame {
    *
    * @return the recipient of the sender
    */
+  @Override
   public Address getSenderAddress() {
     return sender;
   }
@@ -1108,6 +1150,7 @@ public class MessageFrame {
    *
    * @return the value being transferred
    */
+  @Override
   public Wei getValue() {
     return value;
   }
@@ -1117,6 +1160,7 @@ public class MessageFrame {
    *
    * @return the apparent value being transferred
    */
+  @Override
   public Wei getApparentValue() {
     return apparentValue;
   }
@@ -1126,11 +1170,13 @@ public class MessageFrame {
    *
    * @return the current block header
    */
+  @Override
   public BlockValues getBlockValues() {
     return txValues.blockValues();
   }
 
   /** Performs updates based on the message frame's execution. */
+  @Override
   public void notifyCompletion() {
     completer.accept(this);
   }
@@ -1140,6 +1186,7 @@ public class MessageFrame {
    *
    * @return the current message frame stack
    */
+  @Override
   public Deque<MessageFrame> getMessageFrameStack() {
     return txValues.messageFrameStack();
   }
@@ -1149,6 +1196,7 @@ public class MessageFrame {
    *
    * @return the return stack
    */
+  @Override
   public ReturnStack getReturnStack() {
     return returnStack.get();
   }
@@ -1158,6 +1206,7 @@ public class MessageFrame {
    *
    * @param exceptionalHaltReason the exceptional halt reason
    */
+  @Override
   public void setExceptionalHaltReason(
       final Optional<ExceptionalHaltReason> exceptionalHaltReason) {
     this.exceptionalHaltReason = exceptionalHaltReason;
@@ -1168,6 +1217,7 @@ public class MessageFrame {
    *
    * @return the exceptional halt reason
    */
+  @Override
   public Optional<ExceptionalHaltReason> getExceptionalHaltReason() {
     return exceptionalHaltReason;
   }
@@ -1177,6 +1227,7 @@ public class MessageFrame {
    *
    * @return the current mining beneficiary
    */
+  @Override
   public Address getMiningBeneficiary() {
     return txValues.miningBeneficiary();
   }
@@ -1186,6 +1237,7 @@ public class MessageFrame {
    *
    * @return the block hash lookup
    */
+  @Override
   public BlockHashLookup getBlockHashLookup() {
     return txValues.blockHashLookup();
   }
@@ -1195,6 +1247,7 @@ public class MessageFrame {
    *
    * @return the current operation
    */
+  @Override
   public Operation getCurrentOperation() {
     return currentOperation;
   }
@@ -1204,6 +1257,7 @@ public class MessageFrame {
    *
    * @return the max stack size
    */
+  @Override
   public int getMaxStackSize() {
     return txValues.maxStackSize();
   }
@@ -1216,6 +1270,7 @@ public class MessageFrame {
    * @return the context variable
    */
   @SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
+  @Override
   public <T> T getContextVariable(final String name) {
     return (T) contextVariables.get(name);
   }
@@ -1229,6 +1284,7 @@ public class MessageFrame {
    * @return the context variable
    */
   @SuppressWarnings("unchecked")
+  @Override
   public <T> T getContextVariable(final String name, final T defaultValue) {
     return (T) contextVariables.getOrDefault(name, defaultValue);
   }
@@ -1239,6 +1295,7 @@ public class MessageFrame {
    * @param name the name
    * @return the boolean
    */
+  @Override
   public boolean hasContextVariable(final String name) {
     return contextVariables.containsKey(name);
   }
@@ -1248,6 +1305,7 @@ public class MessageFrame {
    *
    * @param currentOperation the current operation
    */
+  @Override
   public void setCurrentOperation(final Operation currentOperation) {
     this.currentOperation = currentOperation;
   }
@@ -1257,6 +1315,7 @@ public class MessageFrame {
    *
    * @return the warmed up storage
    */
+  @Override
   public Table<Address, Bytes32, Boolean> getWarmedUpStorage() {
     return txValues.warmedUpStorage();
   }
@@ -1266,6 +1325,7 @@ public class MessageFrame {
    *
    * @return the maybe updated memory
    */
+  @Override
   public Optional<MemoryEntry> getMaybeUpdatedMemory() {
     return maybeUpdatedMemory;
   }
@@ -1275,6 +1335,7 @@ public class MessageFrame {
    *
    * @return the maybe updated storage
    */
+  @Override
   public Optional<StorageEntry> getMaybeUpdatedStorage() {
     return maybeUpdatedStorage;
   }
@@ -1286,6 +1347,7 @@ public class MessageFrame {
    * @param slot the slot to retrieve
    * @return the data value read
    */
+  @Override
   public Bytes32 getTransientStorageValue(final Address accountAddress, final Bytes32 slot) {
     Bytes32 v = txValues.transientStorage().get(accountAddress, slot);
     return v == null ? Bytes32.ZERO : v;
@@ -1298,12 +1360,14 @@ public class MessageFrame {
    * @param slot the slot to set
    * @param value the value to set in the transient store
    */
+  @Override
   public void setTransientStorageValue(
       final Address accountAddress, final Bytes32 slot, final Bytes32 value) {
     txValues.transientStorage().put(accountAddress, slot, value);
   }
 
   /** Undo all the changes done by this message frame, such as when a revert is called for. */
+  @Override
   public void rollback() {
     txValues.undoChanges(undoMark);
   }
@@ -1313,6 +1377,7 @@ public class MessageFrame {
    *
    * @return optional list of hashes
    */
+  @Override
   public Optional<List<VersionedHash>> getVersionedHashes() {
     return txValues.versionedHashes();
   }
