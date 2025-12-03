@@ -29,6 +29,7 @@ import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.EvmSpecVersion;
 import org.hyperledger.besu.evm.fluent.EVMExecutor;
 import org.hyperledger.besu.evm.fluent.EvmSpec;
+import org.hyperledger.besu.evm.frame.IMessageFrame;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.toy.ToyWorld;
@@ -164,13 +165,13 @@ abstract class AbstractMessageProcessorTest<T extends AbstractMessageProcessor> 
     private final List<TRACE_TYPE> traceHistory = new ArrayList<>();
 
     @Override
-    public void tracePreExecution(final MessageFrame frame) {
+    public void tracePreExecution(final IMessageFrame frame) {
       traceHistory.add(PRE_EXECUTION);
     }
 
     @Override
     public void tracePostExecution(
-        final MessageFrame frame, final Operation.OperationResult operationResult) {
+        final IMessageFrame frame, final Operation.OperationResult operationResult) {
       traceHistory.add(POST_EXECUTION);
     }
 

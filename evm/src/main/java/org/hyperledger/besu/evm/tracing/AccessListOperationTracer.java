@@ -16,6 +16,7 @@ package org.hyperledger.besu.evm.tracing;
 
 import org.hyperledger.besu.datatypes.AccessListEntry;
 import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.evm.frame.IMessageFrame;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.operation.Operation.OperationResult;
 
@@ -36,7 +37,7 @@ public class AccessListOperationTracer implements OperationTracer {
   }
 
   @Override
-  public void tracePostExecution(final MessageFrame frame, final OperationResult operationResult) {
+  public void tracePostExecution(final IMessageFrame frame, final OperationResult operationResult) {
     warmedUpStorage = frame.getWarmedUpStorage();
   }
 

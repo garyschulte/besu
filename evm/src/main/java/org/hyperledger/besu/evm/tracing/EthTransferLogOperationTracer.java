@@ -19,6 +19,7 @@ import static org.apache.tuweni.bytes.Bytes32.leftPad;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.account.MutableAccount;
+import org.hyperledger.besu.evm.frame.IMessageFrame;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.internal.Words;
 import org.hyperledger.besu.evm.log.Log;
@@ -61,7 +62,7 @@ public class EthTransferLogOperationTracer implements OperationTracer {
   }
 
   @Override
-  public void tracePreExecution(final MessageFrame frame) {
+  public void tracePreExecution(final IMessageFrame frame) {
     // Emit log if self-destruct
     if (frame.getCurrentOperation().getOpcode() == 0xFF) {
       emitSelfDestructLog(frame);
@@ -70,7 +71,7 @@ public class EthTransferLogOperationTracer implements OperationTracer {
 
   @Override
   public void tracePostExecution(
-      final MessageFrame frame, final Operation.OperationResult operationResult) {
+      final IMessageFrame frame, final Operation.OperationResult operationResult) {
     // do nothing for now
   }
 
@@ -81,7 +82,7 @@ public class EthTransferLogOperationTracer implements OperationTracer {
     }
   }
 
-  private void emitSelfDestructLog(final MessageFrame frame) {
+  private void emitSelfDestructLog(final IMessageFrame frame) {
     final Address beneficiaryAddress = Words.toAddress(frame.getStackItem(0));
     final Address originatorAddress = frame.getRecipientAddress();
     final MutableAccount originatorAccount = frame.getWorldUpdater().getAccount(originatorAddress);

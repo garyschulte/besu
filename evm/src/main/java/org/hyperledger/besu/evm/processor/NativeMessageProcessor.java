@@ -15,9 +15,14 @@
 package org.hyperledger.besu.evm.processor;
 
 import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.evm.Code;
 import org.hyperledger.besu.evm.EVM;
+import org.hyperledger.besu.evm.frame.BlockValues;
+import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.frame.MessageFrameLayout;
+import org.hyperledger.besu.evm.frame.NativeMessageFrame;
+import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.tracing.OperationTracer;
 
 import java.lang.foreign.Arena;
@@ -29,6 +34,7 @@ import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.util.Optional;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.slf4j.Logger;
@@ -146,7 +152,7 @@ public class NativeMessageProcessor {
         // Set up tracer callbacks if tracer is provided
         MemorySegment tracerPtr = MemorySegment.NULL;
         if (tracer != OperationTracer.NO_TRACING) {
-          tracerPtr = createTracerCallbacks(arena, tracer);
+          tracerPtr = createTracerCallbacks(arena, tracer, frame);
         }
 
         // Call native processor (C++ reads/writes same memory)
@@ -413,11 +419,13 @@ public class NativeMessageProcessor {
    *
    * @param arena Arena for memory allocation
    * @param tracer The Java OperationTracer to call back to
+   * @param frame The Java MessageFrame (for accessing Code and BlockValues)
    * @return MemorySegment pointing to TracerCallbacks struct
    */
   private MemorySegment createTracerCallbacks(
       final Arena arena,
-      final OperationTracer tracer) {
+      final OperationTracer tracer,
+      final MessageFrame frame) {
 
     // Create function descriptors for callbacks
     // void trace_pre_execution(MessageFrameMemory* frame)
@@ -431,14 +439,15 @@ public class NativeMessageProcessor {
     // Create method handles for the adapter methods
     try {
       // Create upcall stubs using adapter methods that translate native calls to Java calls
+      // We bind the tracer, code, and blockValues to the adapter methods
       MemorySegment preExecutionStub = LINKER.upcallStub(
           MethodHandles.insertArguments(
               MethodHandles.lookup().findStatic(
                   NativeMessageProcessor.class,
                   "tracePreExecutionAdapter",
-                  MethodType.methodType(void.class, OperationTracer.class, MemorySegment.class)
+                  MethodType.methodType(void.class, OperationTracer.class, Code.class, BlockValues.class, MemorySegment.class)
               ),
-              0, tracer
+              0, tracer, frame.getCode(), frame.getBlockValues()
           ),
           preExecutionDesc,
           arena
@@ -449,9 +458,9 @@ public class NativeMessageProcessor {
               MethodHandles.lookup().findStatic(
                   NativeMessageProcessor.class,
                   "tracePostExecutionAdapter",
-                  MethodType.methodType(void.class, OperationTracer.class, MemorySegment.class, MemorySegment.class)
+                  MethodType.methodType(void.class, OperationTracer.class, Code.class, BlockValues.class, MemorySegment.class, MemorySegment.class)
               ),
-              0, tracer
+              0, tracer, frame.getCode(), frame.getBlockValues()
           ),
           postExecutionDesc,
           arena
@@ -476,19 +485,31 @@ public class NativeMessageProcessor {
    * Adapter for trace_pre_execution callback.
    * Converts native call (MemorySegment) to Java call (OperationTracer).
    *
+   * <p>Creates a zero-copy NativeMessageFrame backed by the shared memory segment,
+   * allowing the tracer to observe live execution state without copying.
+   *
    * <p>Note: This method is called via MethodHandle reflection, so it appears unused to ErrorProne.
-   * For CountingTracer testing, we call the tracer with a null frame to trigger counting.
    */
-  @SuppressWarnings({"UnusedMethod", "UnusedVariable"})
+  @SuppressWarnings("UnusedMethod")
   private static void tracePreExecutionAdapter(
       final OperationTracer tracer,
+      final Code code,
+      final BlockValues blockValues,
       final MemorySegment frameMemory) {
     try {
-      // Call tracer with null frame for counting purposes
-      // Full implementation would reconstruct MessageFrame from frameMemory
-      tracer.tracePreExecution(null);
+      // Reinterpret the segment with a reasonable size (at least the header)
+      // The segment comes from C++ as a raw pointer with no size information
+      long frameSize = MessageFrameLayout.estimateTotalSize(1024, 1024, 1024, 1024);
+      MemorySegment sizedFrame = frameMemory.reinterpret(frameSize);
+
+      // Create a zero-copy view of the native frame
+      NativeMessageFrame nativeFrame = new NativeMessageFrame(sizedFrame, code, blockValues);
+
+      // Call tracer with live frame data
+      tracer.tracePreExecution(nativeFrame);
     } catch (final Throwable e) {
       LOG.error("Error in tracePreExecution callback", e);
+      e.printStackTrace();
     }
   }
 
@@ -496,20 +517,62 @@ public class NativeMessageProcessor {
    * Adapter for trace_post_execution callback.
    * Converts native call (MemorySegment) to Java call (OperationTracer).
    *
+   * <p>Creates a zero-copy NativeMessageFrame and parses the OperationResult from native memory.
+   *
    * <p>Note: This method is called via MethodHandle reflection, so it appears unused to ErrorProne.
-   * For CountingTracer testing, we call the tracer with null arguments to trigger counting.
    */
-  @SuppressWarnings({"UnusedMethod", "UnusedVariable"})
+  @SuppressWarnings("UnusedMethod")
   private static void tracePostExecutionAdapter(
       final OperationTracer tracer,
+      final Code code,
+      final BlockValues blockValues,
       final MemorySegment frameMemory,
       final MemorySegment resultMemory) {
     try {
-      // Call tracer with null arguments for counting purposes
-      // Full implementation would reconstruct MessageFrame and OperationResult
-      tracer.tracePostExecution(null, null);
+      // Reinterpret the segments with reasonable sizes
+      long frameSize = MessageFrameLayout.estimateTotalSize(1024, 1024, 1024, 1024);
+      MemorySegment sizedFrame = frameMemory.reinterpret(frameSize);
+      MemorySegment sizedResult = resultMemory.reinterpret(16); // OperationResult is 16 bytes
+
+      // Create a zero-copy view of the native frame
+      NativeMessageFrame nativeFrame = new NativeMessageFrame(sizedFrame, code, blockValues);
+
+      // Parse operation result from native memory
+      Operation.OperationResult result = parseOperationResult(sizedResult);
+
+      // Call tracer with live frame data and result
+      tracer.tracePostExecution(nativeFrame, result);
     } catch (final Throwable e) {
       LOG.error("Error in tracePostExecution callback", e);
+      e.printStackTrace();
     }
+  }
+
+  /**
+   * Parse OperationResult from native memory.
+   *
+   * <p>Native struct layout (from tracer_callback.h):
+   * <pre>
+   * struct OperationResult {
+   *     int64_t gas_cost;        // 8 bytes at offset 0
+   *     uint32_t halt_reason;    // 4 bytes at offset 8
+   *     uint32_t pc_increment;   // 4 bytes at offset 12
+   * };
+   * </pre>
+   *
+   * @param resultMemory Memory segment containing the OperationResult struct
+   * @return Java OperationResult object
+   */
+  private static Operation.OperationResult parseOperationResult(final MemorySegment resultMemory) {
+    long gasCost = resultMemory.get(ValueLayout.JAVA_LONG, 0);
+    int haltReasonOrdinal = resultMemory.get(ValueLayout.JAVA_INT, 8);
+
+    // Convert halt reason ordinal to ExceptionalHaltReason (null means no halt)
+    ExceptionalHaltReason haltReason = null;
+    if (haltReasonOrdinal > 0 && haltReasonOrdinal < ExceptionalHaltReason.DefaultExceptionalHaltReason.values().length) {
+      haltReason = ExceptionalHaltReason.DefaultExceptionalHaltReason.values()[haltReasonOrdinal];
+    }
+
+    return new Operation.OperationResult(gasCost, haltReason);
   }
 }

@@ -18,6 +18,7 @@ import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
+import org.hyperledger.besu.evm.frame.IMessageFrame;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.log.Log;
 import org.hyperledger.besu.evm.operation.Operation.OperationResult;
@@ -40,7 +41,7 @@ public interface OperationTracer {
    *
    * @param frame the frame
    */
-  default void tracePreExecution(final MessageFrame frame) {}
+  default void tracePreExecution(final IMessageFrame frame) {}
 
   /**
    * Trace post execution.
@@ -49,7 +50,7 @@ public interface OperationTracer {
    * @param operationResult the operation result
    */
   default void tracePostExecution(
-      final MessageFrame frame, final OperationResult operationResult) {}
+      final IMessageFrame frame, final OperationResult operationResult) {}
 
   /**
    * Trace precompile call.

@@ -16,6 +16,7 @@ package org.hyperledger.besu.evm.tracing;
 
 import org.hyperledger.besu.evm.code.OpcodeInfo;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
+import org.hyperledger.besu.evm.frame.IMessageFrame;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.operation.AbstractCallOperation;
 import org.hyperledger.besu.evm.operation.Operation;
@@ -104,7 +105,7 @@ public class StreamingOperationTracer implements OperationTracer {
   }
 
   @Override
-  public void tracePreExecution(final MessageFrame messageFrame) {
+  public void tracePreExecution(final IMessageFrame messageFrame) {
     final Operation currentOp = messageFrame.getCurrentOperation();
     if (!(traceOpcode = traceOpcode(currentOp))) {
       return;
@@ -177,7 +178,7 @@ public class StreamingOperationTracer implements OperationTracer {
 
   @Override
   public void tracePostExecution(
-      final MessageFrame messageFrame, final Operation.OperationResult executeResult) {
+      final IMessageFrame messageFrame, final Operation.OperationResult executeResult) {
     final Operation currentOp = messageFrame.getCurrentOperation();
     if (!traceOpcode) {
       return;

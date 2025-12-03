@@ -215,6 +215,37 @@ public class NativeMessageProcessorTest {
     System.out.println("Callbacks per second: " + (1_000_000_000L / avgCallbackNanos));
   }
 
+  @Test
+  public void testCallbacksReceiveValidFrameData() {
+    // Test that callbacks receive actual frame data, not null
+    // Create same bytecode as testWithTracerCallbacks: PUSH1 5, PUSH1 3, ADD, STOP
+    Bytes bytecode = Bytes.fromHexString("0x60056003010000");
+    Code code = new CodeV0(bytecode, Hash.ZERO);
+    MessageFrame testFrame = createTestFrameWithCode(code, 1000000L);
+    ValidatingTracer tracer = new ValidatingTracer();
+
+    processor.execute(testFrame, tracer);
+
+    // Verify execution succeeded
+    assertThat(testFrame.getState()).isEqualTo(MessageFrame.State.COMPLETED_SUCCESS);
+
+    // Verify callbacks were invoked
+    assertThat(tracer.preExecutionCount).isGreaterThan(0);
+    assertThat(tracer.postExecutionCount).isGreaterThan(0);
+
+    // Verify frame data was passed (not null)
+    assertThat(tracer.receivedNonNullFrame).isTrue();
+    assertThat(tracer.receivedValidPC).isTrue();
+    assertThat(tracer.receivedValidGas).isTrue();
+
+    System.out.println("\n=== Callback Frame Data Validation ===");
+    System.out.println("Pre-execution callbacks: " + tracer.preExecutionCount);
+    System.out.println("Post-execution callbacks: " + tracer.postExecutionCount);
+    System.out.println("Received non-null frame: " + tracer.receivedNonNullFrame);
+    System.out.println("Received valid PC: " + tracer.receivedValidPC);
+    System.out.println("Received valid gas: " + tracer.receivedValidGas);
+  }
+
   /**
    * Simple tracer that counts callback invocations for testing.
    */
@@ -223,15 +254,51 @@ public class NativeMessageProcessorTest {
     public int postExecutionCount = 0;
 
     @Override
-    public void tracePreExecution(final MessageFrame frame) {
+    public void tracePreExecution(final IMessageFrame frame) {
       preExecutionCount++;
     }
 
     @Override
     public void tracePostExecution(
-        final MessageFrame frame,
+        final IMessageFrame frame,
         final org.hyperledger.besu.evm.operation.Operation.OperationResult operationResult) {
       postExecutionCount++;
+    }
+  }
+
+  /**
+   * Tracer that validates frame data is actually passed correctly to callbacks.
+   */
+  private static class ValidatingTracer implements OperationTracer {
+    public boolean receivedNonNullFrame = false;
+    public boolean receivedValidPC = false;
+    public boolean receivedValidGas = false;
+    public int preExecutionCount = 0;
+    public int postExecutionCount = 0;
+
+    @Override
+    public void tracePreExecution(final IMessageFrame frame) {
+      preExecutionCount++;
+      if (frame != null) {
+        receivedNonNullFrame = true;
+        // Validate frame has reasonable data
+        if (frame.getPC() >= 0) {
+          receivedValidPC = true;
+        }
+        if (frame.getRemainingGas() > 0) {
+          receivedValidGas = true;
+        }
+      }
+    }
+
+    @Override
+    public void tracePostExecution(
+        final IMessageFrame frame,
+        final org.hyperledger.besu.evm.operation.Operation.OperationResult operationResult) {
+      postExecutionCount++;
+      if (frame != null && operationResult != null) {
+        receivedNonNullFrame = true;
+      }
     }
   }
 
