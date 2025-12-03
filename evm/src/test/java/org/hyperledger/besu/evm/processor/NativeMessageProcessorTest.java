@@ -166,11 +166,17 @@ public class NativeMessageProcessorTest {
     // Verify execution succeeded
     assertThat(frame.getState()).isEqualTo(MessageFrame.State.COMPLETED_SUCCESS);
 
+    // Calculate metrics
+    int totalCallbacks = tracer.preExecutionCount + tracer.postExecutionCount;
+    long callbacksPerSecond = (totalCallbacks * 1_000_000_000L) / durationNanos;
+
     // Verify callbacks were called
     System.out.println("Tracer callbacks:");
     System.out.println("  Pre-execution: " + tracer.preExecutionCount);
     System.out.println("  Post-execution: " + tracer.postExecutionCount);
+    System.out.println("  Total callbacks: " + totalCallbacks);
     System.out.println("  Execution time: " + durationNanos + " ns");
+    System.out.println("  Callbacks/second: " + String.format("%,d", callbacksPerSecond));
 
     // Mock EVM executes 4 operations: PUSH1, PUSH1, ADD, STOP
     // Each operation should trigger pre and post callbacks
