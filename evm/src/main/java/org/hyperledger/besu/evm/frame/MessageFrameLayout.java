@@ -193,7 +193,7 @@ public class MessageFrameLayout {
   /**
    * Estimate total memory size needed for a MessageFrame.
    *
-   * @param stackSize Current stack size
+   * @param stackSize Current stack size (unused, reserved for max stack)
    * @param memorySize Current memory size in bytes
    * @param codeSize Code size in bytes
    * @param inputSize Input data size in bytes
@@ -202,7 +202,7 @@ public class MessageFrameLayout {
   public static long estimateTotalSize(
       final int stackSize, final long memorySize, final int codeSize, final int inputSize) {
     long total = HEADER_SIZE;
-    total += stackSize * (long) STACK_ITEM_SIZE; // Stack
+    total += 1024 * (long) STACK_ITEM_SIZE; // Reserve space for maximum stack (1024 items)
     total += memorySize; // Memory
     total += codeSize; // Code
     total += inputSize; // Input

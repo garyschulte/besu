@@ -31,6 +31,21 @@ jar {
   }
 }
 
+test {
+  // Set library path for native EVM implementation
+  systemProperty 'java.library.path', '/Users/garyschulte/dev/metaru'
+
+  // Enable Panama FFM (Foreign Function & Memory API)
+  jvmArgs '--enable-preview', '--enable-native-access=ALL-UNNAMED'
+
+  // Enable verbose test output for debugging
+  testLogging {
+    events "passed", "skipped", "failed", "standardOut", "standardError"
+    showStandardStreams = true
+    exceptionFormat = "full"
+  }
+}
+
 dependencies {
   api 'org.slf4j:slf4j-api'
 

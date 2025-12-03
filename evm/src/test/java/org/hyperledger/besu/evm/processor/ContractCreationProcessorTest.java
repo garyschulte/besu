@@ -17,8 +17,8 @@ package org.hyperledger.besu.evm.processor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hyperledger.besu.evm.EOFTestConstants.EOF_CREATE_CONTRACT;
 import static org.hyperledger.besu.evm.EOFTestConstants.INNER_CONTRACT;
-import static org.hyperledger.besu.evm.frame.MessageFrame.State.COMPLETED_SUCCESS;
-import static org.hyperledger.besu.evm.frame.MessageFrame.State.EXCEPTIONAL_HALT;
+import static org.hyperledger.besu.evm.frame.IMessageFrame.State.COMPLETED_SUCCESS;
+import static org.hyperledger.besu.evm.frame.IMessageFrame.State.EXCEPTIONAL_HALT;
 
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.EvmSpecVersion;

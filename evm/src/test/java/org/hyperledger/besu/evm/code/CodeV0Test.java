@@ -14,7 +14,7 @@
  */
 package org.hyperledger.besu.evm.code;
 
-import static org.hyperledger.besu.evm.frame.MessageFrame.Type.MESSAGE_CALL;
+import static org.hyperledger.besu.evm.frame.IMessageFrame.Type.MESSAGE_CALL;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;

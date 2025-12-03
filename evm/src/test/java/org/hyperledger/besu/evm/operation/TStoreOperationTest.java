@@ -21,6 +21,7 @@ import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.MainnetEVMs;
 import org.hyperledger.besu.evm.frame.BlockValues;
+import org.hyperledger.besu.evm.frame.IMessageFrame;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.CancunGasCalculator;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
@@ -198,14 +199,14 @@ class TStoreOperationTest {
             "Can TSTORE",
             null,
             new ByteCodeBuilder().tstore(1, 1),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             0,
             1),
         Arguments.of(
             "Can tload uninitialized",
             null,
             new ByteCodeBuilder().tload(1).dataOnStackToMemory(0).returnValueAtMemory(32, 0),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             0,
             1),
         Arguments.of(
@@ -216,7 +217,7 @@ class TStoreOperationTest {
                 .tload(1)
                 .dataOnStackToMemory(0)
                 .returnValueAtMemory(32, 0),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             2,
             1),
         Arguments.of(
@@ -227,7 +228,7 @@ class TStoreOperationTest {
                 .tload(2)
                 .dataOnStackToMemory(0)
                 .returnValueAtMemory(32, 0),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             0,
             1),
         Arguments.of(
@@ -237,7 +238,7 @@ class TStoreOperationTest {
                 .tstore(1, 2)
                 .call(ByteCodeBuilder.Operation.CALL, contractAddress, gasLimit)
                 .returnInnerCallResults(),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             0,
             1),
         Arguments.of(
@@ -258,7 +259,7 @@ class TStoreOperationTest {
             new ByteCodeBuilder()
                 .call(ByteCodeBuilder.Operation.CALL, contractAddress, gasLimit)
                 .returnInnerCallResults(),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             8,
             1),
         Arguments.of(
@@ -279,7 +280,7 @@ class TStoreOperationTest {
             new ByteCodeBuilder()
                 .call(ByteCodeBuilder.Operation.CALL, contractAddress, gasLimit)
                 .returnInnerCallResults(),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             9,
             1),
         Arguments.of(
@@ -301,7 +302,7 @@ class TStoreOperationTest {
             new ByteCodeBuilder()
                 .call(ByteCodeBuilder.Operation.CALL, contractAddress, gasLimit)
                 .returnInnerCallResults(),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             8,
             1),
         Arguments.of(
@@ -324,7 +325,7 @@ class TStoreOperationTest {
             new ByteCodeBuilder()
                 .call(ByteCodeBuilder.Operation.CALL, contractAddress, gasLimit)
                 .returnInnerCallResults(),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             8,
             1),
         Arguments.of(
@@ -387,7 +388,7 @@ class TStoreOperationTest {
                 .callWithInput(
                     ByteCodeBuilder.Operation.CALL, contractAddress, gasLimit, UInt256.valueOf(0))
                 .returnInnerCallResults(),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             8,
             1),
         Arguments.of(
@@ -400,7 +401,7 @@ class TStoreOperationTest {
             new ByteCodeBuilder()
                 .call(ByteCodeBuilder.Operation.STATICCALL, contractAddress, gasLimit)
                 .returnInnerCallResults(),
-            MessageFrame.State.COMPLETED_FAILED,
+            IMessageFrame.State.COMPLETED_FAILED,
             0,
             1),
         Arguments.of(
@@ -429,7 +430,7 @@ class TStoreOperationTest {
             new ByteCodeBuilder()
                 .call(ByteCodeBuilder.Operation.CALL, contractAddress, gasLimit)
                 .returnInnerCallResults(),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             8,
             1),
         Arguments.of(
@@ -496,7 +497,7 @@ class TStoreOperationTest {
                 .callWithInput(
                     ByteCodeBuilder.Operation.CALL, contractAddress, gasLimit, UInt256.valueOf(0))
                 .returnInnerCallResults(),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             8,
             1),
         Arguments.of(
@@ -508,14 +509,14 @@ class TStoreOperationTest {
                 .tload(1)
                 .dataOnStackToMemory(0)
                 .returnValueAtMemory(32, 0),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             8,
             1),
         Arguments.of(
             "Zeroing out a transient storage slot does not result in gas refund",
             null,
             new ByteCodeBuilder().tstore(1, 7).tstore(1, 0),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             0,
             1),
         Arguments.of(
@@ -538,7 +539,7 @@ class TStoreOperationTest {
             new ByteCodeBuilder()
                 .call(ByteCodeBuilder.Operation.CALL, contractAddress, gasLimit)
                 .returnInnerCallResults(),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             8,
             1),
         Arguments.of(
@@ -551,7 +552,7 @@ class TStoreOperationTest {
             new ByteCodeBuilder()
                 .call(ByteCodeBuilder.Operation.CALL, contractAddress, gasLimit)
                 .returnInnerCallResults(),
-            MessageFrame.State.COMPLETED_SUCCESS,
+            IMessageFrame.State.COMPLETED_SUCCESS,
             0,
             2));
   }
@@ -562,7 +563,7 @@ class TStoreOperationTest {
       final String ignoredName,
       final ByteCodeBuilder contractByteCodeBuilder,
       final ByteCodeBuilder byteCodeBuilder,
-      final MessageFrame.State expectedResultState,
+      final IMessageFrame.State expectedResultState,
       final int expectedReturnValue,
       final int numberOfIterations) {
 
