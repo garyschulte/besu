@@ -51,6 +51,13 @@ import org.apache.tuweni.units.bigints.UInt256;
  *
  * <p><b>Thread Safety:</b> This class is NOT thread-safe and assumes single-threaded access
  * during native EVM execution.
+ *
+ * <p><b>Portability Notes:</b>
+ * <ul>
+ *   <li>Endianness: Assumes little-endian (x86-64, aarch64 Linux/Darwin)</li>
+ *   <li>Signedness: C++ uses uint32_t for sizes, Java reads as signed int32. Values must be &lt; 2^31.</li>
+ *   <li>GC Safety: Memory is Arena-backed and off-heap during native execution</li>
+ * </ul>
  */
 public class NativeMessageFrame implements IMessageFrame {
 
@@ -58,6 +65,25 @@ public class NativeMessageFrame implements IMessageFrame {
   private final Code code;
   private final BlockValues blockValues;
   private Operation currentOperation;
+
+  /**
+   * Validates that a size value read from native memory is non-negative.
+   * C++ uses uint32_t but Java reads as signed int32. Negative values indicate
+   * the C++ value exceeded 2^31-1, which violates our contract.
+   *
+   * @param size the size value to validate
+   * @param fieldName the field name for error messages
+   * @throws IllegalStateException if size is negative
+   */
+  private static void validateSize(final int size, final String fieldName) {
+    if (size < 0) {
+      throw new IllegalStateException(
+          String.format(
+              "Size field '%s' is negative (%d), indicating C++ value exceeded 2^31-1. "
+                  + "This violates the Java/C++ interop contract.",
+              fieldName, size));
+    }
+  }
 
   /**
    * Creates a new NativeMessageFrame backed by the given memory segment.
@@ -230,7 +256,9 @@ public class NativeMessageFrame implements IMessageFrame {
 
   @Override
   public long memoryByteSize() {
-    return (int) MessageFrameLayout.MEMORY_SIZE.get(frameMemory, 0L);
+    int size = (int) MessageFrameLayout.MEMORY_SIZE.get(frameMemory, 0L);
+    validateSize(size, "memory_size");
+    return size;
   }
 
   @Override
@@ -245,7 +273,7 @@ public class NativeMessageFrame implements IMessageFrame {
       return Bytes.EMPTY;
     }
 
-    long memorySize = memoryByteSize();
+    long memorySize = memoryByteSize();  // Already validated in memoryByteSize()
     if (offset + length > memorySize) {
       throw new IndexOutOfBoundsException(
           "Memory read out of bounds: offset="
@@ -368,6 +396,8 @@ public class NativeMessageFrame implements IMessageFrame {
   @Override
   public Bytes getInputData() {
     int inputSize = (int) MessageFrameLayout.INPUT_SIZE.get(frameMemory, 0L);
+    validateSize(inputSize, "input_size");
+
     if (inputSize == 0) {
       return Bytes.EMPTY;
     }
@@ -493,6 +523,8 @@ public class NativeMessageFrame implements IMessageFrame {
   @Override
   public Bytes getOutputData() {
     int outputSize = (int) MessageFrameLayout.OUTPUT_SIZE.get(frameMemory, 0L);
+    validateSize(outputSize, "output_size");
+
     if (outputSize == 0) {
       return Bytes.EMPTY;
     }
@@ -524,6 +556,8 @@ public class NativeMessageFrame implements IMessageFrame {
   @Override
   public Bytes getReturnData() {
     int returnSize = (int) MessageFrameLayout.RETURN_DATA_SIZE.get(frameMemory, 0L);
+    validateSize(returnSize, "return_data_size");
+
     if (returnSize == 0) {
       return Bytes.EMPTY;
     }
