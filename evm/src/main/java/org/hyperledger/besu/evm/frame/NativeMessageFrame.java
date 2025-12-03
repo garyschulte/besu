@@ -107,18 +107,8 @@ public class NativeMessageFrame implements IMessageFrame {
   }
 
   @Override
-  public void setPC(final int pc) {
-    MessageFrameLayout.PC.set(frameMemory, 0L, pc);
-  }
-
-  @Override
   public int getSection() {
     return (int) MessageFrameLayout.SECTION.get(frameMemory, 0L);
-  }
-
-  @Override
-  public void setSection(final int section) {
-    MessageFrameLayout.SECTION.set(frameMemory, 0L, section);
   }
 
   // ========== Gas Management ==========
@@ -129,43 +119,8 @@ public class NativeMessageFrame implements IMessageFrame {
   }
 
   @Override
-  public void setGasRemaining(final long amount) {
-    MessageFrameLayout.GAS_REMAINING.set(frameMemory, 0L, amount);
-  }
-
-  @Override
-  public long decrementRemainingGas(final long amount) {
-    long current = getRemainingGas();
-    long newValue = current - amount;
-    setGasRemaining(newValue);
-    return newValue;
-  }
-
-  @Override
-  public void incrementRemainingGas(final long amount) {
-    long current = getRemainingGas();
-    setGasRemaining(current + amount);
-  }
-
-  @Override
-  public void clearGasRemaining() {
-    setGasRemaining(0);
-  }
-
-  @Override
   public long getGasRefund() {
     return (long) MessageFrameLayout.GAS_REFUND.get(frameMemory, 0L);
-  }
-
-  @Override
-  public void incrementGasRefund(final long amount) {
-    long current = getGasRefund();
-    MessageFrameLayout.GAS_REFUND.set(frameMemory, 0L, current + amount);
-  }
-
-  @Override
-  public void clearGasRefund() {
-    MessageFrameLayout.GAS_REFUND.set(frameMemory, 0L, 0L);
   }
 
   // ========== Stack Operations ==========
@@ -201,30 +156,6 @@ public class NativeMessageFrame implements IMessageFrame {
   }
 
   @Override
-  public Bytes popStackItem() {
-    throw new UnsupportedOperationException(
-        "Native frame does not support stack modification during callbacks");
-  }
-
-  @Override
-  public void popStackItems(final int n) {
-    throw new UnsupportedOperationException(
-        "Native frame does not support stack modification during callbacks");
-  }
-
-  @Override
-  public void pushStackItem(final Bytes value) {
-    throw new UnsupportedOperationException(
-        "Native frame does not support stack modification during callbacks");
-  }
-
-  @Override
-  public void setStackItem(final int offset, final Bytes value) {
-    throw new UnsupportedOperationException(
-        "Native frame does not support stack modification during callbacks");
-  }
-
-  @Override
   public int stackSize() {
     return (int) MessageFrameLayout.STACK_SIZE.get(frameMemory, 0L);
   }
@@ -246,12 +177,6 @@ public class NativeMessageFrame implements IMessageFrame {
     long currentWordSize = (currentSize + 31) / 32;
     long newWords = wordSize - currentWordSize;
     return newWords * 3 + (newWords * newWords) / 512;
-  }
-
-  @Override
-  public void expandMemory(final long offset, final long length) {
-    throw new UnsupportedOperationException(
-        "Native frame does not support memory expansion during callbacks");
   }
 
   @Override
@@ -313,68 +238,12 @@ public class NativeMessageFrame implements IMessageFrame {
     return readMemory(offset, length);
   }
 
-  @Override
-  public void writeMemory(final long offset, final byte value, final boolean explicitMemoryUpdate) {
-    throw new UnsupportedOperationException(
-        "Native frame does not support memory writes during callbacks");
-  }
-
-  @Override
-  public void writeMemory(final long offset, final long length, final Bytes value) {
-    throw new UnsupportedOperationException(
-        "Native frame does not support memory writes during callbacks");
-  }
-
-  @Override
-  public void writeMemory(
-      final long offset, final long length, final Bytes value, final boolean explicitMemoryUpdate) {
-    throw new UnsupportedOperationException(
-        "Native frame does not support memory writes during callbacks");
-  }
-
-  @Override
-  public void writeMemory(
-      final long offset, final long sourceOffset, final long length, final Bytes value) {
-    throw new UnsupportedOperationException(
-        "Native frame does not support memory writes during callbacks");
-  }
-
-  @Override
-  public void writeMemory(
-      final long offset,
-      final long sourceOffset,
-      final long length,
-      final Bytes value,
-      final boolean explicitMemoryUpdate) {
-    throw new UnsupportedOperationException(
-        "Native frame does not support memory writes during callbacks");
-  }
-
-  @Override
-  public void writeMemoryRightAligned(
-      final long offset, final long length, final Bytes value, final boolean explicitMemoryUpdate) {
-    throw new UnsupportedOperationException(
-        "Native frame does not support memory writes during callbacks");
-  }
-
-  @Override
-  public void copyMemory(
-      final long destination, final long source, final long length, final boolean explicitMemoryUpdate) {
-    throw new UnsupportedOperationException(
-        "Native frame does not support memory writes during callbacks");
-  }
-
   // ========== State and Context ==========
 
   @Override
   public State getState() {
     int stateOrdinal = (int) MessageFrameLayout.STATE.get(frameMemory, 0L);
     return State.values()[stateOrdinal];
-  }
-
-  @Override
-  public void setState(final State state) {
-    MessageFrameLayout.STATE.set(frameMemory, 0L, state.ordinal());
   }
 
   @Override
@@ -542,18 +411,6 @@ public class NativeMessageFrame implements IMessageFrame {
   }
 
   @Override
-  public void setOutputData(final Bytes output) {
-    throw new UnsupportedOperationException(
-        "Native frame does not support output modification during callbacks");
-  }
-
-  @Override
-  public void clearOutputData() {
-    throw new UnsupportedOperationException(
-        "Native frame does not support output modification during callbacks");
-  }
-
-  @Override
   public Bytes getReturnData() {
     int returnSize = (int) MessageFrameLayout.RETURN_DATA_SIZE.get(frameMemory, 0L);
     validateSize(returnSize, "return_data_size");
@@ -575,60 +432,17 @@ public class NativeMessageFrame implements IMessageFrame {
   }
 
   @Override
-  public void setReturnData(final Bytes returnData) {
-    throw new UnsupportedOperationException(
-        "Native frame does not support return data modification during callbacks");
-  }
-
-  @Override
-  public void clearReturnData() {
-    throw new UnsupportedOperationException(
-        "Native frame does not support return data modification during callbacks");
-  }
-
-  @Override
   public Optional<Bytes> getRevertReason() {
     // Revert reasons are not currently stored in native memory
     return Optional.empty();
   }
 
-  @Override
-  public void setRevertReason(final Bytes revertReason) {
-    throw new UnsupportedOperationException(
-        "Native frame does not support revert reason modification during callbacks");
-  }
-
-  // ========== Operations Not Supported in Native Frame ==========
-  // These methods are part of the IMessageFrame interface but don't make sense
-  // for a read-only view of native execution state
-
-  @Override
-  public Code getCreatedCode() {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
-  }
-
-  @Override
-  public void setCreatedCode(final Code createdCode) {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
-  }
+  // ========== Operations Not Fully Supported in Native Frame ==========
+  // These methods are part of the IMessageFrame interface but are not fully implemented
+  // for read-only native frame observation
 
   @Override
   public WorldUpdater getWorldUpdater() {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
-  }
-
-  @Override
-  public void addLog(final Log log) {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
-  }
-
-  @Override
-  public void addLogs(final List<Log> logs) {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
-  }
-
-  @Override
-  public void clearLogs() {
     throw new UnsupportedOperationException("Not supported in native frame callbacks");
   }
 
@@ -638,27 +452,7 @@ public class NativeMessageFrame implements IMessageFrame {
   }
 
   @Override
-  public void addSelfDestruct(final Address address) {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
-  }
-
-  @Override
-  public void addSelfDestructs(final Set<Address> addresses) {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
-  }
-
-  @Override
   public Set<Address> getSelfDestructs() {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
-  }
-
-  @Override
-  public void addCreate(final Address address) {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
-  }
-
-  @Override
-  public void addCreates(final Set<Address> addresses) {
     throw new UnsupportedOperationException("Not supported in native frame callbacks");
   }
 
@@ -673,27 +467,12 @@ public class NativeMessageFrame implements IMessageFrame {
   }
 
   @Override
-  public void addRefund(final Address beneficiary, final Wei amount) {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
-  }
-
-  @Override
   public Map<Address, Wei> getRefunds() {
     throw new UnsupportedOperationException("Not supported in native frame callbacks");
   }
 
   @Override
-  public boolean warmUpAddress(final Address address) {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
-  }
-
-  @Override
   public boolean isAddressWarm(final Address address) {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
-  }
-
-  @Override
-  public boolean warmUpStorage(final Address address, final Bytes32 slot) {
     throw new UnsupportedOperationException("Not supported in native frame callbacks");
   }
 
@@ -704,12 +483,6 @@ public class NativeMessageFrame implements IMessageFrame {
 
   @Override
   public Bytes32 getTransientStorageValue(final Address accountAddress, final Bytes32 slot) {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
-  }
-
-  @Override
-  public void setTransientStorageValue(
-      final Address accountAddress, final Bytes32 slot, final Bytes32 value) {
     throw new UnsupportedOperationException("Not supported in native frame callbacks");
   }
 
@@ -729,20 +502,6 @@ public class NativeMessageFrame implements IMessageFrame {
   }
 
   @Override
-  public void pushReturnStackItem(final ReturnStack.ReturnStackItem returnStackItem) {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
-  }
-
-  @Override
-  public void setExceptionalHaltReason(final Optional<ExceptionalHaltReason> haltReason) {
-    if (haltReason.isPresent() && haltReason.get() instanceof Enum) {
-      MessageFrameLayout.HALT_REASON.set(frameMemory, 0L, ((Enum<?>) haltReason.get()).ordinal());
-    } else {
-      MessageFrameLayout.HALT_REASON.set(frameMemory, 0L, 0);
-    }
-  }
-
-  @Override
   public Optional<ExceptionalHaltReason> getExceptionalHaltReason() {
     int haltReasonOrdinal = (int) MessageFrameLayout.HALT_REASON.get(frameMemory, 0L);
     if (haltReasonOrdinal <= 0 || haltReasonOrdinal >= ExceptionalHaltReason.DefaultExceptionalHaltReason.values().length) {
@@ -759,16 +518,6 @@ public class NativeMessageFrame implements IMessageFrame {
   }
 
   @Override
-  public void setCurrentOperation(final Operation currentOperation) {
-    this.currentOperation = currentOperation;
-  }
-
-  @Override
-  public void storageWasUpdated(final UInt256 storageAddress, final Bytes value) {
-    // Tracing hook - no-op for native frame
-  }
-
-  @Override
   public Optional<MemoryEntry> getMaybeUpdatedMemory() {
     return Optional.empty();
   }
@@ -776,11 +525,6 @@ public class NativeMessageFrame implements IMessageFrame {
   @Override
   public Optional<StorageEntry> getMaybeUpdatedStorage() {
     return Optional.empty();
-  }
-
-  @Override
-  public void rollback() {
-    throw new UnsupportedOperationException("Not supported in native frame callbacks");
   }
 
   @Override
@@ -802,10 +546,5 @@ public class NativeMessageFrame implements IMessageFrame {
   public Optional<List<VersionedHash>> getVersionedHashes() {
     // Not stored in native memory - versioned hashes (EIP-4844) not currently tracked
     return Optional.empty();
-  }
-
-  @Override
-  public void notifyCompletion() {
-    // No-op for native frame
   }
 }

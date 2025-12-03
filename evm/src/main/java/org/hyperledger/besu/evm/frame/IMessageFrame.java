@@ -39,10 +39,16 @@ import org.apache.tuweni.bytes.MutableBytes;
 import org.apache.tuweni.units.bigints.UInt256;
 
 /**
- * Interface for MessageFrame to support both Java and native (C++ JNI) implementations.
+ * Interface for read-only observation of MessageFrame execution state.
  *
- * <p>This interface defines the contract for EVM execution context, allowing drop-in replacement
- * of the standard Java MessageFrame with a native implementation for performance.
+ * <p>This interface provides read-only access to EVM execution context for external observers
+ * such as tracers and monitors. It contains only observation methods (getters), not mutations.
+ *
+ * <p>For EVM operations that need to mutate state (stack, memory, gas, etc.), use the concrete
+ * {@link MessageFrame} class which provides full mutability.
+ *
+ * <p>This allows for efficient implementations like NativeMessageFrame that provide zero-copy
+ * observation of native EVM execution without supporting mutations.
  */
 public interface IMessageFrame {
 
@@ -92,25 +98,11 @@ public interface IMessageFrame {
   int getPC();
 
   /**
-   * Sets program counter.
-   *
-   * @param pc the program counter
-   */
-  void setPC(int pc);
-
-  /**
    * Gets section (for EOF support).
    *
    * @return the section
    */
   int getSection();
-
-  /**
-   * Sets section (for EOF support).
-   *
-   * @param section the section
-   */
-  void setSection(int section);
 
   // ========== Gas Management ==========
 
@@ -122,46 +114,11 @@ public interface IMessageFrame {
   long getRemainingGas();
 
   /**
-   * Sets gas remaining.
-   *
-   * @param amount the amount
-   */
-  void setGasRemaining(long amount);
-
-  /**
-   * Decrement remaining gas.
-   *
-   * @param amount the amount
-   * @return the new gas remaining
-   */
-  long decrementRemainingGas(long amount);
-
-  /**
-   * Increment remaining gas.
-   *
-   * @param amount the amount
-   */
-  void incrementRemainingGas(long amount);
-
-  /** Clear gas remaining. */
-  void clearGasRemaining();
-
-  /**
    * Gets gas refund.
    *
    * @return the gas refund
    */
   long getGasRefund();
-
-  /**
-   * Increment gas refund.
-   *
-   * @param amount the amount
-   */
-  void incrementGasRefund(long amount);
-
-  /** Clear gas refund. */
-  void clearGasRefund();
 
   // ========== Stack Operations ==========
 
@@ -172,35 +129,6 @@ public interface IMessageFrame {
    * @return the stack item
    */
   Bytes getStackItem(int offset);
-
-  /**
-   * Pop stack item.
-   *
-   * @return the popped bytes
-   */
-  Bytes popStackItem();
-
-  /**
-   * Pop stack items.
-   *
-   * @param n the number of items to pop
-   */
-  void popStackItems(int n);
-
-  /**
-   * Push stack item.
-   *
-   * @param value the value
-   */
-  void pushStackItem(Bytes value);
-
-  /**
-   * Sets stack item.
-   *
-   * @param offset the offset from top (0 = top)
-   * @param value the value
-   */
-  void setStackItem(int offset, Bytes value);
 
   /**
    * Stack size.
@@ -219,14 +147,6 @@ public interface IMessageFrame {
    * @return the gas cost
    */
   long calculateMemoryExpansion(long offset, long length);
-
-  /**
-   * Expand memory if needed.
-   *
-   * @param offset the offset
-   * @param length the length
-   */
-  void expandMemory(long offset, long length);
 
   /**
    * Memory byte size.
@@ -279,76 +199,6 @@ public interface IMessageFrame {
    */
   Bytes shadowReadMemory(long offset, long length);
 
-  /**
-   * Write memory.
-   *
-   * @param offset the offset
-   * @param value the value
-   * @param explicitMemoryUpdate explicit memory update flag for tracing
-   */
-  void writeMemory(long offset, byte value, boolean explicitMemoryUpdate);
-
-  /**
-   * Write memory.
-   *
-   * @param offset the offset
-   * @param length the length
-   * @param value the value
-   */
-  void writeMemory(long offset, long length, Bytes value);
-
-  /**
-   * Write memory.
-   *
-   * @param offset the offset
-   * @param length the length
-   * @param value the value
-   * @param explicitMemoryUpdate explicit memory update flag for tracing
-   */
-  void writeMemory(long offset, long length, Bytes value, boolean explicitMemoryUpdate);
-
-  /**
-   * Write bytes to memory from a specific source offset.
-   *
-   * @param offset The offset in memory to start writing
-   * @param sourceOffset The offset in the source value to start writing
-   * @param length The length of the bytes to write
-   * @param value The value to write
-   */
-  void writeMemory(long offset, long sourceOffset, long length, Bytes value);
-
-  /**
-   * Write bytes to memory from a specific source offset.
-   *
-   * @param offset The offset in memory to start writing
-   * @param sourceOffset The offset in the source value to start writing
-   * @param length The length of the bytes to write
-   * @param value The value to write
-   * @param explicitMemoryUpdate true if triggered by a memory opcode, false otherwise
-   */
-  void writeMemory(
-      long offset, long sourceOffset, long length, Bytes value, boolean explicitMemoryUpdate);
-
-  /**
-   * Write memory right aligned.
-   *
-   * @param offset the offset
-   * @param length the length
-   * @param value the value
-   * @param explicitMemoryUpdate explicit memory update flag for tracing
-   */
-  void writeMemoryRightAligned(long offset, long length, Bytes value, boolean explicitMemoryUpdate);
-
-  /**
-   * Copy memory.
-   *
-   * @param destination the destination offset
-   * @param source the source offset
-   * @param length the length
-   * @param explicitMemoryUpdate explicit memory update flag for tracing
-   */
-  void copyMemory(long destination, long source, long length, boolean explicitMemoryUpdate);
-
   // ========== State and Context ==========
 
   /**
@@ -357,13 +207,6 @@ public interface IMessageFrame {
    * @return the state
    */
   State getState();
-
-  /**
-   * Sets state.
-   *
-   * @param state the state
-   */
-  void setState(State state);
 
   /**
    * Gets type.
@@ -508,16 +351,6 @@ public interface IMessageFrame {
   Bytes getOutputData();
 
   /**
-   * Sets output data.
-   *
-   * @param output the output
-   */
-  void setOutputData(Bytes output);
-
-  /** Clear output data. */
-  void clearOutputData();
-
-  /**
    * Gets return data.
    *
    * @return the return data
@@ -525,44 +358,11 @@ public interface IMessageFrame {
   Bytes getReturnData();
 
   /**
-   * Sets return data.
-   *
-   * @param returnData the return data
-   */
-  void setReturnData(Bytes returnData);
-
-  /** Clear return data. */
-  void clearReturnData();
-
-  /**
    * Gets revert reason.
    *
    * @return the revert reason
    */
   Optional<Bytes> getRevertReason();
-
-  /**
-   * Sets revert reason.
-   *
-   * @param revertReason the revert reason
-   */
-  void setRevertReason(Bytes revertReason);
-
-  // ========== Created Code (for CREATE operations) ==========
-
-  /**
-   * Gets created code.
-   *
-   * @return the created code
-   */
-  Code getCreatedCode();
-
-  /**
-   * Sets created code.
-   *
-   * @param createdCode the created code
-   */
-  void setCreatedCode(Code createdCode);
 
   // ========== World State ==========
 
@@ -576,23 +376,6 @@ public interface IMessageFrame {
   // ========== Logs ==========
 
   /**
-   * Add log.
-   *
-   * @param log the log
-   */
-  void addLog(Log log);
-
-  /**
-   * Add logs.
-   *
-   * @param logs the logs
-   */
-  void addLogs(List<Log> logs);
-
-  /** Clear logs. */
-  void clearLogs();
-
-  /**
    * Gets logs.
    *
    * @return the logs
@@ -602,20 +385,6 @@ public interface IMessageFrame {
   // ========== Self Destructs ==========
 
   /**
-   * Add self destruct.
-   *
-   * @param address the address
-   */
-  void addSelfDestruct(Address address);
-
-  /**
-   * Add self destructs.
-   *
-   * @param addresses the addresses
-   */
-  void addSelfDestructs(Set<Address> addresses);
-
-  /**
    * Gets self destructs.
    *
    * @return the self destructs
@@ -623,20 +392,6 @@ public interface IMessageFrame {
   Set<Address> getSelfDestructs();
 
   // ========== Creates ==========
-
-  /**
-   * Add create.
-   *
-   * @param address the address
-   */
-  void addCreate(Address address);
-
-  /**
-   * Add creates.
-   *
-   * @param addresses the addresses
-   */
-  void addCreates(Set<Address> addresses);
 
   /**
    * Gets creates.
@@ -656,14 +411,6 @@ public interface IMessageFrame {
   // ========== Refunds ==========
 
   /**
-   * Add refund.
-   *
-   * @param beneficiary the beneficiary
-   * @param amount the amount
-   */
-  void addRefund(Address beneficiary, Wei amount);
-
-  /**
    * Gets refunds.
    *
    * @return the refunds
@@ -673,29 +420,12 @@ public interface IMessageFrame {
   // ========== EIP-2929 Access Lists (Warm/Cold Storage) ==========
 
   /**
-   * Warm up address.
-   *
-   * @param address the address
-   * @return true if was cold (first access)
-   */
-  boolean warmUpAddress(Address address);
-
-  /**
    * Is address warm.
    *
    * @param address the address
    * @return true if warm
    */
   boolean isAddressWarm(Address address);
-
-  /**
-   * Warm up storage.
-   *
-   * @param address the address
-   * @param slot the slot
-   * @return true if was cold (first access)
-   */
-  boolean warmUpStorage(Address address, Bytes32 slot);
 
   /**
    * Gets warmed up storage.
@@ -714,15 +444,6 @@ public interface IMessageFrame {
    * @return the value
    */
   Bytes32 getTransientStorageValue(Address accountAddress, Bytes32 slot);
-
-  /**
-   * Sets transient storage value.
-   *
-   * @param accountAddress the account address
-   * @param slot the slot
-   * @param value the value
-   */
-  void setTransientStorageValue(Address accountAddress, Bytes32 slot, Bytes32 value);
 
   // ========== Return Stack (EOF) ==========
 
@@ -747,21 +468,7 @@ public interface IMessageFrame {
    */
   ReturnStack.ReturnStackItem peekReturnStack();
 
-  /**
-   * Push return stack item.
-   *
-   * @param returnStackItem the return stack item
-   */
-  void pushReturnStackItem(ReturnStack.ReturnStackItem returnStackItem);
-
   // ========== Exceptional Halt ==========
-
-  /**
-   * Sets exceptional halt reason.
-   *
-   * @param haltReason the halt reason
-   */
-  void setExceptionalHaltReason(Optional<ExceptionalHaltReason> haltReason);
 
   /**
    * Gets exceptional halt reason.
@@ -780,21 +487,6 @@ public interface IMessageFrame {
   Operation getCurrentOperation();
 
   /**
-   * Sets current operation (for tracing).
-   *
-   * @param currentOperation the current operation
-   */
-  void setCurrentOperation(Operation currentOperation);
-
-  /**
-   * Storage was updated (for tracing).
-   *
-   * @param storageAddress the storage address
-   * @param value the value
-   */
-  void storageWasUpdated(UInt256 storageAddress, Bytes value);
-
-  /**
    * Gets maybe updated memory (for tracing).
    *
    * @return the maybe updated memory
@@ -807,11 +499,6 @@ public interface IMessageFrame {
    * @return the maybe updated storage
    */
   Optional<StorageEntry> getMaybeUpdatedStorage();
-
-  // ========== Rollback ==========
-
-  /** Rollback state changes. */
-  void rollback();
 
   // ========== Context Variables (Extensibility) ==========
 
@@ -850,9 +537,4 @@ public interface IMessageFrame {
    * @return the versioned hashes
    */
   Optional<List<VersionedHash>> getVersionedHashes();
-
-  // ========== Completion ==========
-
-  /** Notify completion (callback to parent). */
-  void notifyCompletion();
 }

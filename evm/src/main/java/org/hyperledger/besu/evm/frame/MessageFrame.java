@@ -276,7 +276,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param pc The new program counter value
    */
-  @Override
   public void setPC(final int pc) {
     this.pc = pc;
   }
@@ -286,7 +285,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param section the code section index
    */
-  @Override
   public void setSection(final int section) {
     this.section = section;
   }
@@ -302,7 +300,6 @@ public class MessageFrame implements IMessageFrame {
   }
 
   /** Deducts the remaining gas. */
-  @Override
   public void clearGasRemaining() {
     this.gasRemaining = 0L;
   }
@@ -313,7 +310,6 @@ public class MessageFrame implements IMessageFrame {
    * @param amount The amount of gas to deduct
    * @return the amount of gas available, after deductions.
    */
-  @Override
   public long decrementRemainingGas(final long amount) {
     this.gasRemaining -= amount;
     return this.gasRemaining;
@@ -334,7 +330,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param amount The amount of gas to increment
    */
-  @Override
   public void incrementRemainingGas(final long amount) {
     this.gasRemaining += amount;
   }
@@ -344,7 +339,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param amount The amount of remaining gas
    */
-  @Override
   public void setGasRemaining(final long amount) {
     this.gasRemaining = amount;
   }
@@ -364,7 +358,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param output The output data
    */
-  @Override
   public void setOutputData(final Bytes output) {
     this.output = output;
   }
@@ -374,7 +367,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param createdCode the code that was created
    */
-  @Override
   public void setCreatedCode(final Code createdCode) {
     this.createdCode = createdCode;
   }
@@ -384,13 +376,11 @@ public class MessageFrame implements IMessageFrame {
    *
    * @return the code that was created
    */
-  @Override
   public Code getCreatedCode() {
     return createdCode;
   }
 
   /** Clears the output data buffer. */
-  @Override
   public void clearOutputData() {
     setOutputData(Bytes.EMPTY);
   }
@@ -410,13 +400,11 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param returnData The return data
    */
-  @Override
   public void setReturnData(final Bytes returnData) {
     this.returnData = returnData;
   }
 
   /** Clear the return data buffer. */
-  @Override
   public void clearReturnData() {
     setReturnData(Bytes.EMPTY);
   }
@@ -439,7 +427,6 @@ public class MessageFrame implements IMessageFrame {
    * @return the item at the top of the stack
    * @throws UnderflowException if the stack is empty
    */
-  @Override
   public Bytes popStackItem() {
     return stack.pop();
   }
@@ -449,7 +436,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param n The number of items to pop off the stack
    */
-  @Override
   public void popStackItems(final int n) {
     stack.bulkPop(n);
   }
@@ -459,7 +445,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param value The value to push onto the stack.
    */
-  @Override
   public void pushStackItem(final Bytes value) {
     stack.push(value);
   }
@@ -471,7 +456,6 @@ public class MessageFrame implements IMessageFrame {
    * @param value The value to set the stack item to
    * @throws IllegalStateException if the stack is too small
    */
-  @Override
   public void setStackItem(final int offset, final Bytes value) {
     stack.set(offset, value);
   }
@@ -511,7 +495,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param returnStackItem item to be pushed
    */
-  @Override
   public void pushReturnStackItem(final ReturnStack.ReturnStackItem returnStackItem) {
     returnStack.get().push(returnStackItem);
   }
@@ -544,7 +527,6 @@ public class MessageFrame implements IMessageFrame {
    * @param offset The offset in memory
    * @param length The length of the memory access
    */
-  @Override
   public void expandMemory(final long offset, final long length) {
     memory.ensureCapacityForBytes(offset, length);
   }
@@ -584,7 +566,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param revertReason the revert reason
    */
-  @Override
   public void setRevertReason(final Bytes revertReason) {
     this.revertReason = Optional.ofNullable(revertReason);
   }
@@ -652,7 +633,6 @@ public class MessageFrame implements IMessageFrame {
    * @param value The value to set in memory
    * @param explicitMemoryUpdate true if triggered by a memory opcode, false otherwise
    */
-  @Override
   public void writeMemory(final long offset, final byte value, final boolean explicitMemoryUpdate) {
     memory.setByte(offset, value);
     if (explicitMemoryUpdate) {
@@ -667,7 +647,6 @@ public class MessageFrame implements IMessageFrame {
    * @param length The length of the bytes to write
    * @param value The value to write
    */
-  @Override
   public void writeMemory(final long offset, final long length, final Bytes value) {
     writeMemory(offset, length, value, false);
   }
@@ -680,7 +659,6 @@ public class MessageFrame implements IMessageFrame {
    * @param value The value to write
    * @param explicitMemoryUpdate true if triggered by a memory opcode, false otherwise
    */
-  @Override
   public void writeMemory(
       final long offset, final long length, final Bytes value, final boolean explicitMemoryUpdate) {
     memory.setBytes(offset, length, value);
@@ -699,7 +677,6 @@ public class MessageFrame implements IMessageFrame {
    * @param value The value to write
    * @param explicitMemoryUpdate true if triggered by a memory opcode, false otherwise
    */
-  @Override
   public void writeMemoryRightAligned(
       final long offset, final long length, final Bytes value, final boolean explicitMemoryUpdate) {
     memory.setBytesRightAligned(offset, length, value);
@@ -716,7 +693,6 @@ public class MessageFrame implements IMessageFrame {
    * @param length The length of the bytes to write
    * @param value The value to write
    */
-  @Override
   public void writeMemory(
       final long offset, final long sourceOffset, final long length, final Bytes value) {
     writeMemory(offset, sourceOffset, length, value, false);
@@ -731,7 +707,6 @@ public class MessageFrame implements IMessageFrame {
    * @param value The value to write
    * @param explicitMemoryUpdate true if triggered by a memory opcode, false otherwise
    */
-  @Override
   public void writeMemory(
       final long offset,
       final long sourceOffset,
@@ -754,7 +729,6 @@ public class MessageFrame implements IMessageFrame {
    * @param length the number of bytes to copy
    * @param explicitMemoryUpdate true if triggered by a memory opcode, false otherwise
    */
-  @Override
   public void copyMemory(
       final long dst, final long src, final long length, final boolean explicitMemoryUpdate) {
     if (length > 0) {
@@ -808,7 +782,6 @@ public class MessageFrame implements IMessageFrame {
    * @param storageAddress the storage address
    * @param value the value
    */
-  @Override
   public void storageWasUpdated(final UInt256 storageAddress, final Bytes value) {
     maybeUpdatedStorage = Optional.of(new StorageEntry(storageAddress, value));
   }
@@ -818,7 +791,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param log The log to accumulate
    */
-  @Override
   public void addLog(final Log log) {
     logs.add(log);
   }
@@ -828,13 +800,11 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param logs The logs to accumulate
    */
-  @Override
   public void addLogs(final List<Log> logs) {
     this.logs.addAll(logs);
   }
 
   /** Clear the accumulated logs. */
-  @Override
   public void clearLogs() {
     logs.clear();
   }
@@ -854,13 +824,11 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param amount The amount to increment the refund
    */
-  @Override
   public void incrementGasRefund(final long amount) {
     this.txValues.gasRefunds().set(this.txValues.gasRefunds().get() + amount);
   }
 
   /** Clear the accumulated gas refund. */
-  @Override
   public void clearGasRefund() {
     this.txValues.gasRefunds().set(0L);
   }
@@ -880,7 +848,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param address The recipient to self-destruct
    */
-  @Override
   public void addSelfDestruct(final Address address) {
     txValues.selfDestructs().add(address);
   }
@@ -890,7 +857,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param addresses The addresses to self-destruct
    */
-  @Override
   public void addSelfDestructs(final Set<Address> addresses) {
     txValues.selfDestructs().addAll(addresses);
   }
@@ -910,7 +876,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param address The recipient to create
    */
-  @Override
   public void addCreate(final Address address) {
     txValues.creates().add(address);
   }
@@ -920,7 +885,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param addresses The addresses to create
    */
-  @Override
   public void addCreates(final Set<Address> addresses) {
     txValues.creates().addAll(addresses);
   }
@@ -955,7 +919,6 @@ public class MessageFrame implements IMessageFrame {
    * @param beneficiary the beneficiary of the refund.
    * @param amount the amount of the refund.
    */
-  @Override
   public void addRefund(final Address beneficiary, final Wei amount) {
     refunds.put(beneficiary, amount);
   }
@@ -976,7 +939,6 @@ public class MessageFrame implements IMessageFrame {
    * @param address the address to warm up
    * @return true if the address was already warmed up
    */
-  @Override
   public boolean warmUpAddress(final Address address) {
     return !txValues.warmedUpAddresses().add(address);
   }
@@ -1000,7 +962,6 @@ public class MessageFrame implements IMessageFrame {
    * @param slot the slot being warmed up
    * @return true if the storage slot was already warmed up
    */
-  @Override
   public boolean warmUpStorage(final Address address, final Bytes32 slot) {
     return txValues.warmedUpStorage().put(address, slot, Boolean.TRUE) != null;
   }
@@ -1040,7 +1001,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param state The new execution state
    */
-  @Override
   public void setState(final State state) {
     this.state = state;
   }
@@ -1176,7 +1136,6 @@ public class MessageFrame implements IMessageFrame {
   }
 
   /** Performs updates based on the message frame's execution. */
-  @Override
   public void notifyCompletion() {
     completer.accept(this);
   }
@@ -1206,7 +1165,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param exceptionalHaltReason the exceptional halt reason
    */
-  @Override
   public void setExceptionalHaltReason(
       final Optional<ExceptionalHaltReason> exceptionalHaltReason) {
     this.exceptionalHaltReason = exceptionalHaltReason;
@@ -1305,7 +1263,6 @@ public class MessageFrame implements IMessageFrame {
    *
    * @param currentOperation the current operation
    */
-  @Override
   public void setCurrentOperation(final Operation currentOperation) {
     this.currentOperation = currentOperation;
   }
@@ -1360,14 +1317,12 @@ public class MessageFrame implements IMessageFrame {
    * @param slot the slot to set
    * @param value the value to set in the transient store
    */
-  @Override
   public void setTransientStorageValue(
       final Address accountAddress, final Bytes32 slot, final Bytes32 value) {
     txValues.transientStorage().put(accountAddress, slot, value);
   }
 
   /** Undo all the changes done by this message frame, such as when a revert is called for. */
-  @Override
   public void rollback() {
     txValues.undoChanges(undoMark);
   }
