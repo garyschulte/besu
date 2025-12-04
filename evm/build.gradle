@@ -17,6 +17,14 @@
 apply plugin: 'java-library'
 apply plugin: 'idea'
 
+task profileNativeProcessor(type: JavaExec) {
+  classpath = sourceSets.test.runtimeClasspath
+  mainClass = 'org.hyperledger.besu.evm.processor.ProfileNativeProcessor'
+  systemProperty 'java.library.path', '/Users/garyschulte/dev/metaru'
+  jvmArgs '--enable-preview', '--enable-native-access=ALL-UNNAMED'
+  jvmArgs '-agentpath:/tmp/async-profiler-3.0-macos/lib/libasyncProfiler.dylib=start,event=cpu,file=/tmp/native_profile_flamegraph.html'
+}
+
 jar {
   archiveBaseName = calculateArtifactId(project)
   manifest {
@@ -37,6 +45,11 @@ test {
 
   // Enable Panama FFM (Foreign Function & Memory API)
   jvmArgs '--enable-preview', '--enable-native-access=ALL-UNNAMED'
+
+  // Async profiler for flame graphs (if enabled)
+  if (project.hasProperty('profile')) {
+    jvmArgs "-agentpath:/tmp/async-profiler-3.0-macos/lib/libasyncProfiler.dylib=start,event=cpu,file=/tmp/flamegraph.html,interval=1000000"
+  }
 
   // Enable verbose test output for debugging
   testLogging {

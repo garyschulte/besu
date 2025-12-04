@@ -252,6 +252,383 @@ public class NativeMessageProcessorTest {
     System.out.println("Received valid gas: " + tracer.receivedValidGas);
   }
 
+  @Test
+  public void testPerformanceComparisonJavaVsNative() {
+    // Compare Java EVM vs Native EVM performance with tracer callbacks
+    // Bytecode: PUSH1 5, PUSH1 3, ADD, STOP
+    Bytes bytecode = Bytes.fromHexString("0x60056003010000");
+
+    int iterations = 10000;
+    int warmupRuns = 100;
+
+    // === Java EVM Performance ===
+    System.out.println("\n=== Java EVM vs Native EVM Performance Comparison ===");
+    System.out.println("Bytecode: " + bytecode.toHexString() + " (PUSH1 5, PUSH1 3, ADD, STOP)");
+    System.out.println("Iterations: " + iterations);
+
+    // Warm up Java EVM
+    for (int i = 0; i < warmupRuns; i++) {
+      MessageFrame javaFrame = createTestFrameWithCode(new CodeV0(bytecode, Hash.ZERO), 1000000L);
+      CountingTracer javaTracer = new CountingTracer();
+      evm.runToHalt(javaFrame, javaTracer);
+    }
+
+    // Measure Java EVM
+    long javaTotalNanos = 0;
+    for (int i = 0; i < iterations; i++) {
+      MessageFrame javaFrame = createTestFrameWithCode(new CodeV0(bytecode, Hash.ZERO), 1000000L);
+      CountingTracer javaTracer = new CountingTracer();
+
+      long startNanos = System.nanoTime();
+      evm.runToHalt(javaFrame, javaTracer);
+      long durationNanos = System.nanoTime() - startNanos;
+
+      javaTotalNanos += durationNanos;
+    }
+
+    long javaAvgNanos = javaTotalNanos / iterations;
+
+    // === Native EVM Performance ===
+
+    // Warm up Native EVM
+    for (int i = 0; i < warmupRuns; i++) {
+      MessageFrame nativeFrame = createTestFrameWithCode(new CodeV0(bytecode, Hash.ZERO), 1000000L);
+      CountingTracer nativeTracer = new CountingTracer();
+      processor.execute(nativeFrame, nativeTracer);
+    }
+
+    // Measure Native EVM
+    long nativeTotalNanos = 0;
+    for (int i = 0; i < iterations; i++) {
+      MessageFrame nativeFrame = createTestFrameWithCode(new CodeV0(bytecode, Hash.ZERO), 1000000L);
+      CountingTracer nativeTracer = new CountingTracer();
+
+      long startNanos = System.nanoTime();
+      processor.execute(nativeFrame, nativeTracer);
+      long durationNanos = System.nanoTime() - startNanos;
+
+      nativeTotalNanos += durationNanos;
+    }
+
+    long nativeAvgNanos = nativeTotalNanos / iterations;
+
+    // === Results ===
+    double speedup = (double) javaAvgNanos / nativeAvgNanos;
+
+    System.out.println("\n--- Results ---");
+    System.out.println("Java EVM average:   " + String.format("%,d", javaAvgNanos) + " ns");
+    System.out.println("Native EVM average: " + String.format("%,d", nativeAvgNanos) + " ns");
+    System.out.println("Speedup: " + String.format("%.2fx", speedup));
+    System.out.println();
+
+    if (speedup > 1.0) {
+      System.out.println("✓ Native EVM is " + String.format("%.2fx", speedup) + " faster than Java EVM");
+    } else {
+      System.out.println("⚠ Java EVM is " + String.format("%.2fx", 1.0 / speedup) + " faster than Native EVM");
+    }
+  }
+
+  @Test
+  public void testPerformanceComparisonNoTracer() {
+    // Compare Java EVM vs Native EVM performance WITHOUT tracer callbacks
+    // This measures pure execution overhead without callback costs
+    // Bytecode: PUSH1 5, PUSH1 3, ADD, STOP
+    Bytes bytecode = Bytes.fromHexString("0x60056003010000");
+
+    int iterations = 10000;
+    int warmupRuns = 100;
+
+    System.out.println("\n=== Java EVM vs Native EVM Performance (NO_TRACING) ===");
+    System.out.println("Bytecode: " + bytecode.toHexString() + " (PUSH1 5, PUSH1 3, ADD, STOP)");
+    System.out.println("Iterations: " + iterations);
+    System.out.println("Note: Using NO_TRACING to measure pure execution without callbacks");
+
+    // === Java EVM Performance (NO_TRACING) ===
+
+    // Warm up Java EVM
+    for (int i = 0; i < warmupRuns; i++) {
+      MessageFrame javaFrame = createTestFrameWithCode(new CodeV0(bytecode, Hash.ZERO), 1000000L);
+      evm.runToHalt(javaFrame, OperationTracer.NO_TRACING);
+    }
+
+    // Measure Java EVM
+    long javaTotalNanos = 0;
+    for (int i = 0; i < iterations; i++) {
+      MessageFrame javaFrame = createTestFrameWithCode(new CodeV0(bytecode, Hash.ZERO), 1000000L);
+
+      long startNanos = System.nanoTime();
+      evm.runToHalt(javaFrame, OperationTracer.NO_TRACING);
+      long durationNanos = System.nanoTime() - startNanos;
+
+      javaTotalNanos += durationNanos;
+    }
+
+    long javaAvgNanos = javaTotalNanos / iterations;
+
+    // === Native EVM Performance (NO_TRACING) ===
+
+    // Warm up Native EVM
+    for (int i = 0; i < warmupRuns; i++) {
+      MessageFrame nativeFrame = createTestFrameWithCode(new CodeV0(bytecode, Hash.ZERO), 1000000L);
+      processor.execute(nativeFrame, OperationTracer.NO_TRACING);
+    }
+
+    // Measure Native EVM
+    long nativeTotalNanos = 0;
+    for (int i = 0; i < iterations; i++) {
+      MessageFrame nativeFrame = createTestFrameWithCode(new CodeV0(bytecode, Hash.ZERO), 1000000L);
+
+      long startNanos = System.nanoTime();
+      processor.execute(nativeFrame, OperationTracer.NO_TRACING);
+      long durationNanos = System.nanoTime() - startNanos;
+
+      nativeTotalNanos += durationNanos;
+    }
+
+    long nativeAvgNanos = nativeTotalNanos / iterations;
+
+    // === Results ===
+    double speedup = (double) javaAvgNanos / nativeAvgNanos;
+
+    System.out.println("\n--- Results (NO_TRACING) ---");
+    System.out.println("Java EVM average:   " + String.format("%,d", javaAvgNanos) + " ns");
+    System.out.println("Native EVM average: " + String.format("%,d", nativeAvgNanos) + " ns");
+    System.out.println("Speedup: " + String.format("%.2fx", speedup));
+    System.out.println();
+
+    if (speedup > 1.0) {
+      System.out.println("✓ Native EVM is " + String.format("%.2fx", speedup) + " faster than Java EVM");
+    } else {
+      System.out.println("⚠ Java EVM is " + String.format("%.2fx", 1.0 / speedup) + " faster than Native EVM");
+    }
+
+    System.out.println("\nNote: This measures pure execution + FFI overhead, without callback costs");
+  }
+
+  @Test
+  public void testPerformanceLongBytecode() {
+    // Test with longer bytecode to see if native EVM becomes competitive
+    // Generate bytecode: PUSH1 1, [PUSH1 1, ADD] x 249, STOP = 500 operations
+    int pushAddPairs = 249; // Will result in 1 + (249 * 2) + 1 = 500 operations
+
+    // Build bytecode: PUSH1 1, [PUSH1 1, ADD] * 249, STOP
+    byte[] bytecodeArray = new byte[1 + 2 + (pushAddPairs * 3) + 1];
+    int idx = 0;
+    bytecodeArray[idx++] = 0x60; // PUSH1
+    bytecodeArray[idx++] = 0x01; // value 1
+
+    for (int i = 0; i < pushAddPairs; i++) {
+      bytecodeArray[idx++] = 0x60; // PUSH1
+      bytecodeArray[idx++] = 0x01; // value 1
+      bytecodeArray[idx++] = 0x01; // ADD
+    }
+    bytecodeArray[idx++] = 0x00; // STOP
+
+    Bytes bytecode = Bytes.wrap(bytecodeArray);
+    Code code = new CodeV0(bytecode, Hash.ZERO);
+
+    int iterations = 1000; // Fewer iterations since bytecode is longer
+    int warmupRuns = 1; // Minimal warmup to avoid JIT optimization skew
+
+    System.out.println("\n=== Java EVM vs Native EVM Performance (Long Bytecode, Minimal Warmup) ===");
+    System.out.println("Bytecode length: " + bytecode.size() + " bytes");
+    System.out.println("Operations: ~500 (PUSH1 1, [PUSH1 1, ADD] x 249, STOP)");
+    System.out.println("Warmup runs: " + warmupRuns + " (minimal to avoid JIT optimization)");
+    System.out.println("Measurement iterations: " + iterations);
+
+    // === Java EVM Performance (NO_TRACING) ===
+
+    // Warm up
+    for (int i = 0; i < warmupRuns; i++) {
+      MessageFrame javaFrame = createTestFrameWithCode(code, 10000000L);
+      evm.runToHalt(javaFrame, OperationTracer.NO_TRACING);
+    }
+
+    // Measure
+    long javaTotalNanos = 0;
+    for (int i = 0; i < iterations; i++) {
+      MessageFrame javaFrame = createTestFrameWithCode(code, 10000000L);
+
+      long startNanos = System.nanoTime();
+      evm.runToHalt(javaFrame, OperationTracer.NO_TRACING);
+      long durationNanos = System.nanoTime() - startNanos;
+
+      javaTotalNanos += durationNanos;
+    }
+
+    long javaAvgNanos = javaTotalNanos / iterations;
+
+    // === Native EVM Performance (NO_TRACING) ===
+
+    // Warm up
+    for (int i = 0; i < warmupRuns; i++) {
+      MessageFrame nativeFrame = createTestFrameWithCode(code, 10000000L);
+      processor.execute(nativeFrame, OperationTracer.NO_TRACING);
+    }
+
+    // Measure
+    long nativeTotalNanos = 0;
+    for (int i = 0; i < iterations; i++) {
+      MessageFrame nativeFrame = createTestFrameWithCode(code, 10000000L);
+
+      long startNanos = System.nanoTime();
+      processor.execute(nativeFrame, OperationTracer.NO_TRACING);
+      long durationNanos = System.nanoTime() - startNanos;
+
+      nativeTotalNanos += durationNanos;
+    }
+
+    long nativeAvgNanos = nativeTotalNanos / iterations;
+
+    // === Results ===
+    double speedup = (double) javaAvgNanos / nativeAvgNanos;
+
+    System.out.println("\n--- Results (NO_TRACING, 500 ops) ---");
+    System.out.println("Java EVM average:   " + String.format("%,d", javaAvgNanos) + " ns (" + String.format("%.2f", javaAvgNanos / 500.0) + " ns/op)");
+    System.out.println("Native EVM average: " + String.format("%,d", nativeAvgNanos) + " ns (" + String.format("%.2f", nativeAvgNanos / 500.0) + " ns/op)");
+    System.out.println("Speedup: " + String.format("%.2fx", speedup));
+    System.out.println();
+
+    if (speedup > 1.0) {
+      System.out.println("✓ Native EVM is " + String.format("%.2fx", speedup) + " faster than Java EVM");
+    } else if (speedup < 1.0) {
+      System.out.println("⚠ Java EVM is still " + String.format("%.2fx", 1.0 / speedup) + " faster than Native EVM");
+    } else {
+      System.out.println("≈ Performance is roughly equivalent");
+    }
+
+    // Calculate FFI overhead amortization
+    double ffiOverhead = 12566.0; // From previous test
+    double nativeExecOnly = nativeAvgNanos - ffiOverhead;
+    System.out.println("\nEstimated FFI overhead: " + String.format("%.0f", ffiOverhead) + " ns");
+    System.out.println("Estimated native execution: " + String.format("%.0f", nativeExecOnly) + " ns");
+    System.out.println("FFI overhead as % of total: " + String.format("%.1f%%", (ffiOverhead / nativeAvgNanos) * 100));
+  }
+
+  @Test
+  public void testReusableMemoryPerformance() {
+    // Test the performance difference between allocating arenas vs reusing static memory
+    // This isolates the arena allocation overhead
+    int pushAddPairs = 249; // 500 operations total
+
+    // Build bytecode: PUSH1 1, [PUSH1 1, ADD] * 249, STOP
+    byte[] bytecodeArray = new byte[1 + 2 + (pushAddPairs * 3) + 1];
+    int idx = 0;
+    bytecodeArray[idx++] = 0x60; // PUSH1
+    bytecodeArray[idx++] = 0x01; // value 1
+
+    for (int i = 0; i < pushAddPairs; i++) {
+      bytecodeArray[idx++] = 0x60; // PUSH1
+      bytecodeArray[idx++] = 0x01; // value 1
+      bytecodeArray[idx++] = 0x01; // ADD
+    }
+    bytecodeArray[idx++] = 0x00; // STOP
+
+    Bytes bytecode = Bytes.wrap(bytecodeArray);
+    Code code = new CodeV0(bytecode, Hash.ZERO);
+
+    int iterations = 1000;
+    int warmupRuns = 10;
+
+    System.out.println("\n=== Arena Allocation Overhead Test ===");
+    System.out.println("Bytecode: 500 operations");
+    System.out.println("Warmup: " + warmupRuns + " iterations");
+    System.out.println("Measurement: " + iterations + " iterations");
+
+    // === Native EVM with arena allocation (current implementation) ===
+
+    // Warm up
+    for (int i = 0; i < warmupRuns; i++) {
+      MessageFrame frame = createTestFrameWithCode(code, 10000000L);
+      processor.execute(frame, OperationTracer.NO_TRACING);
+    }
+
+    // Measure
+    long withArenaAllocTotalNanos = 0;
+    for (int i = 0; i < iterations; i++) {
+      MessageFrame frame = createTestFrameWithCode(code, 10000000L);
+
+      long startNanos = System.nanoTime();
+      processor.execute(frame, OperationTracer.NO_TRACING);
+      long durationNanos = System.nanoTime() - startNanos;
+
+      withArenaAllocTotalNanos += durationNanos;
+    }
+
+    long withArenaAllocAvgNanos = withArenaAllocTotalNanos / iterations;
+
+    // === Native EVM with reusable memory (no arena allocation) ===
+
+    // Warm up
+    for (int i = 0; i < warmupRuns; i++) {
+      MessageFrame frame = createTestFrameWithCode(code, 10000000L);
+      processor.executeWithReusableMemory(frame, OperationTracer.NO_TRACING);
+    }
+
+    // Measure
+    long withReusableTotalNanos = 0;
+    for (int i = 0; i < iterations; i++) {
+      MessageFrame frame = createTestFrameWithCode(code, 10000000L);
+
+      long startNanos = System.nanoTime();
+      processor.executeWithReusableMemory(frame, OperationTracer.NO_TRACING);
+      long durationNanos = System.nanoTime() - startNanos;
+
+      withReusableTotalNanos += durationNanos;
+    }
+
+    long withReusableAvgNanos = withReusableTotalNanos / iterations;
+
+    // === Results ===
+    long arenaOverhead = withArenaAllocAvgNanos - withReusableAvgNanos;
+    double improvement = (double) withArenaAllocAvgNanos / withReusableAvgNanos;
+
+    System.out.println("\n--- Results ---");
+    System.out.println("Native with arena allocation:  " + String.format("%,d", withArenaAllocAvgNanos) + " ns");
+    System.out.println("Native with reusable memory:   " + String.format("%,d", withReusableAvgNanos) + " ns");
+    System.out.println("Arena allocation overhead:     " + String.format("%,d", arenaOverhead) + " ns (" + String.format("%.1f%%", (arenaOverhead * 100.0 / withArenaAllocAvgNanos)) + ")");
+    System.out.println("Speedup with reusable memory:  " + String.format("%.2fx", improvement));
+
+    if (improvement > 1.1) {
+      System.out.println("\n✓ Reusable memory is " + String.format("%.2fx", improvement) + " faster");
+    } else {
+      System.out.println("\n≈ Minimal difference - arena allocation is not the bottleneck");
+    }
+
+    // === Compare optimized native to Java EVM ===
+
+    // Warm up Java
+    for (int i = 0; i < warmupRuns; i++) {
+      MessageFrame frame = createTestFrameWithCode(code, 10000000L);
+      evm.runToHalt(frame, OperationTracer.NO_TRACING);
+    }
+
+    // Measure Java
+    long javaTotalNanos = 0;
+    for (int i = 0; i < iterations; i++) {
+      MessageFrame frame = createTestFrameWithCode(code, 10000000L);
+
+      long startNanos = System.nanoTime();
+      evm.runToHalt(frame, OperationTracer.NO_TRACING);
+      long durationNanos = System.nanoTime() - startNanos;
+
+      javaTotalNanos += durationNanos;
+    }
+
+    long javaAvgNanos = javaTotalNanos / iterations;
+    double nativeVsJava = (double) withReusableAvgNanos / javaAvgNanos;
+
+    System.out.println("\n--- Optimized Native vs Java EVM ---");
+    System.out.println("Java EVM:                          " + String.format("%,d", javaAvgNanos) + " ns (" + String.format("%.2f", javaAvgNanos / 500.0) + " ns/op)");
+    System.out.println("Native (reusable memory):          " + String.format("%,d", withReusableAvgNanos) + " ns (" + String.format("%.2f", withReusableAvgNanos / 500.0) + " ns/op)");
+
+    if (nativeVsJava < 1.0) {
+      System.out.println("✓ Native is " + String.format("%.2fx", 1.0 / nativeVsJava) + " faster than Java!");
+    } else {
+      System.out.println("⚠ Java is still " + String.format("%.2fx", nativeVsJava) + " faster than Native");
+    }
+  }
+
   /**
    * Simple tracer that counts callback invocations for testing.
    */

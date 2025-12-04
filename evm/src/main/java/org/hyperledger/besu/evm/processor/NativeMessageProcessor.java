@@ -60,6 +60,11 @@ public class NativeMessageProcessor {
   private static boolean nativeLibraryLoaded = false;
   private static Throwable loadError;
 
+  // Reusable memory for performance testing (not thread-safe)
+  private static final Arena REUSABLE_ARENA = Arena.ofShared();
+  private static MemorySegment reusableFrameMemory;
+  private static final long REUSABLE_MEMORY_SIZE = 10 * 1024 * 1024; // 10 MB
+
   static {
     try {
       // Load native library
@@ -77,6 +82,9 @@ public class NativeMessageProcessor {
                   ValueLayout.ADDRESS, // MemorySegment* (frame memory)
                   ValueLayout.ADDRESS // OperationTracer* callback
               ));
+
+      // Allocate reusable memory segment for performance testing
+      reusableFrameMemory = REUSABLE_ARENA.allocate(REUSABLE_MEMORY_SIZE, 64);
 
       nativeLibraryLoaded = true;
       LOG.info("Native EVM library loaded successfully with Panama FFM");
@@ -161,6 +169,61 @@ public class NativeMessageProcessor {
         // Read results back from shared memory
         updateFrameFromMemory(frame, frameMemory);
       }
+
+    } catch (final Throwable e) {
+      LOG.error("Native execution failed, falling back to Java EVM", e);
+      evm.runToHalt(frame, tracer);
+    }
+  }
+
+  /**
+   * Execute message frame using native processor with reusable memory.
+   *
+   * <p>This method uses a statically allocated memory segment instead of allocating a new arena
+   * on each call. This is much faster for performance testing but NOT thread-safe.
+   *
+   * <p>WARNING: This method is for single-threaded performance testing only. Do not use in
+   * production code.
+   *
+   * @param frame The message frame to execute
+   * @param tracer The operation tracer
+   */
+  public void executeWithReusableMemory(final MessageFrame frame, final OperationTracer tracer) {
+    if (!nativeLibraryLoaded) {
+      // Fallback to Java EVM
+      evm.runToHalt(frame, tracer);
+      return;
+    }
+
+    try {
+      // Verify reusable memory is large enough
+      long totalSize =
+          MessageFrameLayout.estimateTotalSize(
+              frame.stackSize(),
+              frame.memoryByteSize(),
+              frame.getCode().getSize(),
+              frame.getInputData().size());
+
+      if (totalSize > REUSABLE_MEMORY_SIZE) {
+        throw new IllegalStateException(
+            "Frame requires " + totalSize + " bytes but reusable memory is only "
+                + REUSABLE_MEMORY_SIZE + " bytes");
+      }
+
+      // Populate frame memory from Java MessageFrame
+      populateFrameMemory(reusableFrameMemory, frame);
+
+      // Set up tracer callbacks if tracer is provided
+      MemorySegment tracerPtr = MemorySegment.NULL;
+      if (tracer != OperationTracer.NO_TRACING) {
+        tracerPtr = createTracerCallbacks(REUSABLE_ARENA, tracer, frame);
+      }
+
+      // Call native processor (C++ reads/writes same memory)
+      executeMessageHandle.invoke(reusableFrameMemory, tracerPtr);
+
+      // Read results back from shared memory
+      updateFrameFromMemory(frame, reusableFrameMemory);
 
     } catch (final Throwable e) {
       LOG.error("Native execution failed, falling back to Java EVM", e);
