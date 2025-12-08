@@ -53,7 +53,7 @@ public class MessageFrameLayout {
               ValueLayout.JAVA_INT.withName("is_static"),
               ValueLayout.JAVA_INT.withName("depth"),
 
-              // Pointers to variable-size data (64 bytes)
+              // Pointers to variable-size data (80 bytes)
               ValueLayout.JAVA_LONG.withName("stack_ptr"),
               ValueLayout.JAVA_LONG.withName("memory_ptr"),
               ValueLayout.JAVA_LONG.withName("code_ptr"),
@@ -62,8 +62,10 @@ public class MessageFrameLayout {
               ValueLayout.JAVA_LONG.withName("return_data_ptr"),
               ValueLayout.JAVA_LONG.withName("logs_ptr"),
               ValueLayout.JAVA_LONG.withName("warm_addresses_ptr"),
+              ValueLayout.JAVA_LONG.withName("storage_ptr"),
+              ValueLayout.JAVA_LONG.withName("witness_ptr"),
 
-              // Sizes for variable data (32 bytes)
+              // Sizes for variable data (36 bytes)
               ValueLayout.JAVA_INT.withName("code_size"),
               ValueLayout.JAVA_INT.withName("input_size"),
               ValueLayout.JAVA_INT.withName("output_size"),
@@ -71,7 +73,8 @@ public class MessageFrameLayout {
               ValueLayout.JAVA_INT.withName("logs_count"),
               ValueLayout.JAVA_INT.withName("warm_addresses_count"),
               ValueLayout.JAVA_INT.withName("warm_storage_count"),
-              ValueLayout.JAVA_INT.withName("padding"),
+              ValueLayout.JAVA_INT.withName("storage_slot_count"),
+              ValueLayout.JAVA_INT.withName("max_storage_slots"),
 
               // Immutable context - addresses (100 bytes)
               MemoryLayout.sequenceLayout(20, ValueLayout.JAVA_BYTE).withName("recipient"),
@@ -88,8 +91,8 @@ public class MessageFrameLayout {
               // Halt reason (4 bytes)
               ValueLayout.JAVA_INT.withName("halt_reason"),
 
-              // Reserved for future use and alignment (40 bytes)
-              MemoryLayout.sequenceLayout(40, ValueLayout.JAVA_BYTE).withName("reserved"))
+              // Reserved for future use and alignment (16 bytes)
+              MemoryLayout.sequenceLayout(16, ValueLayout.JAVA_BYTE).withName("reserved"))
           .withName("MessageFrameMemory");
 
   // VarHandles for efficient field access
@@ -178,17 +181,33 @@ public class MessageFrameLayout {
   public static final VarHandle HALT_REASON =
       LAYOUT.varHandle(MemoryLayout.PathElement.groupElement("halt_reason"));
 
+  /** Pointer to storage slots */
+  public static final VarHandle STORAGE_PTR =
+      LAYOUT.varHandle(MemoryLayout.PathElement.groupElement("storage_ptr"));
+
+  /** Number of storage slots */
+  public static final VarHandle STORAGE_SLOT_COUNT =
+      LAYOUT.varHandle(MemoryLayout.PathElement.groupElement("storage_slot_count"));
+
+  /** Maximum storage slots allocated */
+  public static final VarHandle MAX_STORAGE_SLOTS =
+      LAYOUT.varHandle(MemoryLayout.PathElement.groupElement("max_storage_slots"));
+
+  /** Pointer to transaction witness */
+  public static final VarHandle WITNESS_PTR =
+      LAYOUT.varHandle(MemoryLayout.PathElement.groupElement("witness_ptr"));
+
   // Offsets for address fields (20 bytes each)
-  public static final long OFFSET_RECIPIENT = 144;
-  public static final long OFFSET_SENDER = 164;
-  public static final long OFFSET_CONTRACT = 184;
-  public static final long OFFSET_ORIGINATOR = 204;
-  public static final long OFFSET_MINING_BENEFICIARY = 224;
+  public static final long OFFSET_RECIPIENT = 164;
+  public static final long OFFSET_SENDER = 184;
+  public static final long OFFSET_CONTRACT = 204;
+  public static final long OFFSET_ORIGINATOR = 224;
+  public static final long OFFSET_MINING_BENEFICIARY = 244;
 
   // Offsets for value fields (32 bytes each)
-  public static final long OFFSET_VALUE = 244;
-  public static final long OFFSET_APPARENT_VALUE = 276;
-  public static final long OFFSET_GAS_PRICE = 308;
+  public static final long OFFSET_VALUE = 264;
+  public static final long OFFSET_APPARENT_VALUE = 296;
+  public static final long OFFSET_GAS_PRICE = 328;
 
   /**
    * Estimate total memory size needed for a MessageFrame.
