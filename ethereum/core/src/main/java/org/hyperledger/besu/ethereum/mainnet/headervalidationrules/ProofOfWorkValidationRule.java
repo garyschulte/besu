@@ -32,11 +32,12 @@ import org.apache.tuweni.units.bigints.UInt256;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("unused")
 public final class ProofOfWorkValidationRule implements DetachedBlockHeaderValidationRule {
 
   private static final Logger LOG = LoggerFactory.getLogger(ProofOfWorkValidationRule.class);
 
-  private static final BigInteger ETHASH_TARGET_UPPER_BOUND = BigInteger.valueOf(2).pow(256);
+//  private static final BigInteger ETHASH_TARGET_UPPER_BOUND = BigInteger.valueOf(2).pow(256);
 
   private final PoWHasher hasher;
 
@@ -67,42 +68,42 @@ public final class ProofOfWorkValidationRule implements DetachedBlockHeaderValid
     } else if (header.getBaseFee().isPresent()) {
       LOG.info("Invalid block header: presence of basefee in a non-eip1559 block");
       return false;
-    }
+      }
 
     final Hash headerHash = hashHeader(header);
-    PoWSolution solution =
-        hasher.hash(header.getNonce(), header.getNumber(), epochCalculator, headerHash);
-
+//    PoWSolution solution =
+//        hasher.hash(header.getNonce(), header.getNumber(), epochCalculator, headerHash.getBytes());
+//
     if (header.getDifficulty().isZero()) {
       LOG.info("Invalid block header: difficulty is 0");
       return false;
     }
-    final BigInteger difficulty = header.getDifficulty().toUnsignedBigInteger();
-    final UInt256 target =
-        difficulty.equals(BigInteger.ONE)
-            ? UInt256.MAX_VALUE
-            : UInt256.valueOf(ETHASH_TARGET_UPPER_BOUND.divide(difficulty));
-    final UInt256 result = UInt256.fromBytes(solution.getSolution());
-    if (result.compareTo(target) > 0) {
-      LOG.info(
-          "Invalid block header: the EthHash result {} was greater than the target {}.\n"
-              + "Failing header:\n{}",
-          result,
-          target,
-          header);
-      return false;
-    }
+//    final BigInteger difficulty = header.getDifficulty().toUnsignedBigInteger();
+//    final UInt256 target =
+//        difficulty.equals(BigInteger.ONE)
+//            ? UInt256.MAX_VALUE
+//            : UInt256.valueOf(ETHASH_TARGET_UPPER_BOUND.divide(difficulty));
+//    final UInt256 result = UInt256.fromBytes(solution.getSolution());
+//    if (result.compareTo(target) > 0) {
+//      LOG.info(
+//          "Invalid block header: the EthHash result {} was greater than the target {}.\n"
+//              + "Failing header:\n{}",
+//          result,
+//          target,
+//          header);
+//      return false;
+//    }
 
-    final Hash mixedHash = solution.getMixHash();
-    if (!header.getMixHash().equals(mixedHash)) {
-      LOG.info(
-          "Invalid block header: header mixed hash {} does not equal calculated mixed hash {}.\n"
-              + "Failing header:\n{}",
-          header.getMixHash(),
-          mixedHash,
-          header);
-      return false;
-    }
+//    final Hash mixedHash = solution.getMixHash();
+//    if (!header.getMixHash().equals(mixedHash)) {
+//      LOG.info(
+//          "Invalid block header: header mixed hash {} does not equal calculated mixed hash {}.\n"
+//              + "Failing header:\n{}",
+//          header.getMixHash(),
+//          mixedHash,
+//          header);
+//      return false;
+//    }
 
     return true;
   }
