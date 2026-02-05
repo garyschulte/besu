@@ -43,8 +43,7 @@ import org.slf4j.LoggerFactory;
 
 /** PostgreSQL key-value storage factory. */
 public class PostgreSQLKeyValueStorageFactory implements KeyValueStorageFactory {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(PostgreSQLKeyValueStorageFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PostgreSQLKeyValueStorageFactory.class);
   private static final String NAME = "postgresql";
 
   private final Supplier<PostgreSQLFactoryConfiguration> configuration;
@@ -117,11 +116,7 @@ public class PostgreSQLKeyValueStorageFactory implements KeyValueStorageFactory 
 
       segmentedStorage =
           new PostgreSQLColumnarKeyValueStorage(
-              connectionManager,
-              schemaManager,
-              partitionManager,
-              segmentsForFormat,
-              metricsSystem);
+              connectionManager, schemaManager, partitionManager, segmentsForFormat, metricsSystem);
 
       LOG.info("PostgreSQL storage created with {} segments", segmentsForFormat.size());
     }
@@ -155,8 +150,7 @@ public class PostgreSQLKeyValueStorageFactory implements KeyValueStorageFactory 
 
     // Initialize schema manager
     schemaManager =
-        new PostgreSQLSchemaManager(
-            connectionManager, postgresqlConfiguration.getSchema());
+        new PostgreSQLSchemaManager(connectionManager, postgresqlConfiguration.getSchema());
 
     // Initialize partition manager
     partitionManager = new PostgreSQLPartitionManager(postgresqlConfiguration.getSchema());

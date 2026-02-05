@@ -44,7 +44,8 @@ public class PostgreSQLExceptionMapper {
 
     // Serialization failure (40001)
     if ("40001".equals(sqlState)) {
-      return new StorageException("Transaction serialization failure, retry may help: " + message, e);
+      return new StorageException(
+          "Transaction serialization failure, retry may help: " + message, e);
     }
 
     // Deadlock (40P01)

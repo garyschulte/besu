@@ -59,6 +59,15 @@ dependencies {
   testImplementation 'org.mockito:mockito-junit-jupiter'
   testImplementation 'org.junit.jupiter:junit-jupiter'
   testImplementation 'org.assertj:assertj-core'
-  testImplementation 'org.testcontainers:testcontainers'
-  testImplementation 'org.testcontainers:postgresql'
+  testImplementation 'org.testcontainers:testcontainers:1.19.3'
+  testImplementation 'org.testcontainers:postgresql:1.19.3'
+  testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
+}
+
+test {
+  useJUnitPlatform()
+  testLogging {
+    events "passed", "skipped", "failed"
+    exceptionFormat "full"
+  }
 }

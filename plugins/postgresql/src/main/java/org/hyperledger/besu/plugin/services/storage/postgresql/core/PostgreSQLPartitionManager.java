@@ -23,11 +23,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
-import java.util.Locale;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +64,9 @@ public class PostgreSQLPartitionManager {
     final long partitionEnd = partitionStart + COLD_PARTITION_SIZE;
 
     final String partitionName =
-        String.format("segment_%s_part_%d_%d", segmentName.toLowerCase(Locale.ROOT), partitionStart, partitionEnd);
+        String.format(
+            "segment_%s_part_%d_%d",
+            segmentName.toLowerCase(Locale.ROOT), partitionStart, partitionEnd);
 
     // Check cache first
     final Set<String> partitions =
@@ -149,7 +150,7 @@ public class PostgreSQLPartitionManager {
         String.format(
             """
             DELETE FROM %s.%s
-            WHERE block_end IS NOT NULL AND block_end < ?
+            WHERE block_end IS NOT NULL AND block_end <= ?
             """,
             schemaName, partitionName);
 

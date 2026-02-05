@@ -28,7 +28,6 @@ import java.util.Locale;
 import java.util.Set;
 
 import com.google.common.base.Splitter;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -220,8 +219,7 @@ public class PostgreSQLSchemaManager {
    */
   public Set<String> listTables() {
     final Set<String> tables = new HashSet<>();
-    final String query =
-        "SELECT table_name FROM information_schema.tables WHERE table_schema = ?";
+    final String query = "SELECT table_name FROM information_schema.tables WHERE table_schema = ?";
 
     try (Connection conn = connectionManager.getConnection();
         var ps = conn.prepareStatement(query)) {

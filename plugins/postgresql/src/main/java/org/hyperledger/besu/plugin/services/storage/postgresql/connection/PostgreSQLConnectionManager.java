@@ -40,7 +40,8 @@ public class PostgreSQLConnectionManager implements AutoCloseable {
   public PostgreSQLConnectionManager(final PostgreSQLConfiguration configuration) {
     this.configuration = configuration;
     this.dataSource = createDataSource(configuration);
-    LOG.info("PostgreSQL connection pool initialized with {} connections", configuration.getPoolSize());
+    LOG.info(
+        "PostgreSQL connection pool initialized with {} connections", configuration.getPoolSize());
   }
 
   private HikariDataSource createDataSource(final PostgreSQLConfiguration config) {

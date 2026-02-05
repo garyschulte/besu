@@ -14,6 +14,8 @@
  */
 package org.hyperledger.besu.plugin.services.storage.postgresql.core;
 
+import static java.util.stream.Collectors.toUnmodifiableSet;
+
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.exception.StorageException;
 import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier;
@@ -24,13 +26,10 @@ import org.hyperledger.besu.plugin.services.storage.postgresql.connection.Postgr
 import org.hyperledger.besu.plugin.services.storage.postgresql.util.PostgreSQLExceptionMapper;
 import org.hyperledger.besu.plugin.services.storage.postgresql.util.PostgreSQLSchemaManager;
 
-import static java.util.stream.Collectors.toUnmodifiableSet;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -109,8 +108,7 @@ public class PostgreSQLColumnarKeyValueStorage implements SnappableKeyValueStora
 
     final String tableName = schemaManager.getTableName(segment);
     final String sql =
-        String.format(
-            "SELECT value FROM %s WHERE key = ? AND block_end IS NULL", tableName);
+        String.format("SELECT value FROM %s WHERE key = ? AND block_end IS NULL", tableName);
 
     try (Connection conn = connectionManager.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -206,8 +204,8 @@ public class PostgreSQLColumnarKeyValueStorage implements SnappableKeyValueStora
   }
 
   @Override
-  public Optional<NearestKeyValue> getNearestAfter(
-      final SegmentIdentifier segment, final Bytes key) throws StorageException {
+  public Optional<NearestKeyValue> getNearestAfter(final SegmentIdentifier segment, final Bytes key)
+      throws StorageException {
     throwIfClosed();
 
     final String tableName = schemaManager.getTableName(segment);
@@ -252,8 +250,7 @@ public class PostgreSQLColumnarKeyValueStorage implements SnappableKeyValueStora
 
     final String tableName = schemaManager.getTableName(segment);
     final String sql =
-        String.format(
-            "SELECT key, value FROM %s WHERE block_end IS NULL ORDER BY key", tableName);
+        String.format("SELECT key, value FROM %s WHERE block_end IS NULL ORDER BY key", tableName);
 
     return createStream(sql);
   }
@@ -365,7 +362,8 @@ public class PostgreSQLColumnarKeyValueStorage implements SnappableKeyValueStora
               new java.util.Spliterators.AbstractSpliterator<byte[]>(
                   Long.MAX_VALUE, java.util.Spliterator.ORDERED) {
                 @Override
-                public boolean tryAdvance(final java.util.function.Consumer<? super byte[]> action) {
+                public boolean tryAdvance(
+                    final java.util.function.Consumer<? super byte[]> action) {
                   try {
                     if (rs.next()) {
                       action.accept(rs.getBytes("key"));
@@ -418,17 +416,21 @@ public class PostgreSQLColumnarKeyValueStorage implements SnappableKeyValueStora
   public Set<byte[]> getAllKeysThat(
       final SegmentIdentifier segment, final Predicate<byte[]> returnCondition) {
     throwIfClosed();
-    return streamKeys(segment).filter(returnCondition).collect(toUnmodifiableSet());
+    try (final var stream = streamKeys(segment)) {
+      return stream.filter(returnCondition).collect(toUnmodifiableSet());
+    }
   }
 
   @Override
   public Set<byte[]> getAllValuesFromKeysThat(
       final SegmentIdentifier segment, final Predicate<byte[]> returnCondition) {
     throwIfClosed();
-    return stream(segment)
-        .filter(pair -> returnCondition.test(pair.getKey()))
-        .map(Pair::getValue)
-        .collect(toUnmodifiableSet());
+    try (final var stream = stream(segment)) {
+      return stream
+          .filter(pair -> returnCondition.test(pair.getKey()))
+          .map(Pair::getValue)
+          .collect(toUnmodifiableSet());
+    }
   }
 
   @Override

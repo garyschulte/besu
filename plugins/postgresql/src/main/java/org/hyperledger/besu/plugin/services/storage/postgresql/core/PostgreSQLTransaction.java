@@ -62,8 +62,7 @@ public class PostgreSQLTransaction implements SegmentedKeyValueStorageTransactio
   }
 
   @Override
-  public void put(
-      final SegmentIdentifier segmentIdentifier, final byte[] key, final byte[] value) {
+  public void put(final SegmentIdentifier segmentIdentifier, final byte[] key, final byte[] value) {
     operations
         .computeIfAbsent(segmentIdentifier, k -> new ArrayList<>())
         .add(new PutOperation(key, value));
@@ -85,7 +84,10 @@ public class PostgreSQLTransaction implements SegmentedKeyValueStorageTransactio
     Connection conn = null;
     try {
       conn = connectionManager.getConnection();
-      conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+      // Set isolation level BEFORE starting transaction (before setAutoCommit(false))
+      if (conn.getAutoCommit()) {
+        conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+      }
       conn.setAutoCommit(false);
 
       // Process each segment's operations
@@ -101,7 +103,8 @@ public class PostgreSQLTransaction implements SegmentedKeyValueStorageTransactio
       }
 
       conn.commit();
-      LOG.debug("Transaction committed {} operations at block {}", getTotalOperationCount(), blockNumber);
+      LOG.debug(
+          "Transaction committed {} operations at block {}", getTotalOperationCount(), blockNumber);
     } catch (SQLException e) {
       if (conn != null) {
         try {
@@ -126,8 +129,7 @@ public class PostgreSQLTransaction implements SegmentedKeyValueStorageTransactio
 
     // Step 1: Close out old versions (UPDATE block_end)
     final String updateSql =
-        String.format(
-            "UPDATE %s SET block_end = ? WHERE key = ? AND block_end IS NULL", tableName);
+        String.format("UPDATE %s SET block_end = ? WHERE key = ? AND block_end IS NULL", tableName);
 
     // Step 2: Insert new versions
     final String insertSql =
@@ -138,28 +140,24 @@ public class PostgreSQLTransaction implements SegmentedKeyValueStorageTransactio
     try (PreparedStatement updatePs = conn.prepareStatement(updateSql);
         PreparedStatement insertPs = conn.prepareStatement(insertSql)) {
 
+      // First: batch all UPDATEs to close old versions
+      for (Operation op : segmentOps) {
+        updatePs.setLong(1, blockNumber);
+        updatePs.setBytes(2, op.key);
+        updatePs.addBatch();
+      }
+      updatePs.executeBatch();
+
+      // Second: batch all INSERTs for PUT operations
       for (Operation op : segmentOps) {
         if (op instanceof PutOperation put) {
-          // Close old version
-          updatePs.setLong(1, blockNumber);
-          updatePs.setBytes(2, put.key);
-          updatePs.addBatch();
-
-          // Insert new version
           insertPs.setBytes(1, put.key);
           insertPs.setBytes(2, put.value);
           insertPs.setLong(3, blockNumber);
           insertPs.addBatch();
-        } else if (op instanceof RemoveOperation remove) {
-          // Just close the old version (logical delete)
-          updatePs.setLong(1, blockNumber);
-          updatePs.setBytes(2, remove.key);
-          updatePs.addBatch();
         }
+        // RemoveOperation just closed the old version above
       }
-
-      // Execute batches
-      updatePs.executeBatch();
       insertPs.executeBatch();
 
       LOG.debug(
