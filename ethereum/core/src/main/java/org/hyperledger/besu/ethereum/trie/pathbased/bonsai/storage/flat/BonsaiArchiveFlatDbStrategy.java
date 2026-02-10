@@ -280,12 +280,16 @@ public class BonsaiArchiveFlatDbStrategy extends BonsaiFullFlatDbStrategy {
       final SegmentedKeyValueStorage storage,
       final SegmentedKeyValueStorageTransaction transaction,
       final Hash accountHash,
-      final Bytes accountValue) {
+      final Bytes accountValue,
+      final Optional<BonsaiContext> context) {
+
+    // Use passed context, or fall back to reading from storage if not provided
+    final BonsaiContext effectiveContext =
+        context.orElseGet(() -> getStateArchiveContextForWrite(storage).orElseThrow());
 
     // key suffixed with block context, or MIN_BLOCK_SUFFIX if we have no context:
     byte[] keySuffixed =
-        calculateArchiveKeyWithMinSuffix(
-            getStateArchiveContextForWrite(storage).get(), accountHash.getBytes().toArrayUnsafe());
+        calculateArchiveKeyWithMinSuffix(effectiveContext, accountHash.getBytes().toArrayUnsafe());
 
     transaction.put(ACCOUNT_INFO_STATE, keySuffixed, accountValue.toArrayUnsafe());
   }
@@ -294,12 +298,16 @@ public class BonsaiArchiveFlatDbStrategy extends BonsaiFullFlatDbStrategy {
   public void removeFlatAccount(
       final SegmentedKeyValueStorage storage,
       final SegmentedKeyValueStorageTransaction transaction,
-      final Hash accountHash) {
+      final Hash accountHash,
+      final Optional<BonsaiContext> context) {
+
+    // Use passed context, or fall back to reading from storage if not provided
+    final BonsaiContext effectiveContext =
+        context.orElseGet(() -> getStateArchiveContextForWrite(storage).orElseThrow());
 
     // insert a key suffixed with block context, with 'deleted account' value
     byte[] keySuffixed =
-        calculateArchiveKeyWithMinSuffix(
-            getStateArchiveContextForWrite(storage).get(), accountHash.getBytes().toArrayUnsafe());
+        calculateArchiveKeyWithMinSuffix(effectiveContext, accountHash.getBytes().toArrayUnsafe());
 
     transaction.put(ACCOUNT_INFO_STATE, keySuffixed, DELETED_ACCOUNT_VALUE);
   }
@@ -381,13 +389,17 @@ public class BonsaiArchiveFlatDbStrategy extends BonsaiFullFlatDbStrategy {
       final SegmentedKeyValueStorageTransaction transaction,
       final Hash accountHash,
       final Hash slotHash,
-      final Bytes storageValue) {
+      final Bytes storageValue,
+      final Optional<BonsaiContext> context) {
+
+    // Use passed context, or fall back to reading from storage if not provided
+    final BonsaiContext effectiveContext =
+        context.orElseGet(() -> getStateArchiveContextForWrite(storage).orElseThrow());
 
     // get natural key from account hash and slot key
     byte[] naturalKey = calculateNaturalSlotKey(accountHash, slotHash);
     // keyNearest, use MIN_BLOCK_SUFFIX in the absence of a block context:
-    byte[] keyNearest =
-        calculateArchiveKeyWithMinSuffix(getStateArchiveContextForWrite(storage).get(), naturalKey);
+    byte[] keyNearest = calculateArchiveKeyWithMinSuffix(effectiveContext, naturalKey);
 
     transaction.put(ACCOUNT_STORAGE_STORAGE, keyNearest, storageValue.toArrayUnsafe());
   }
@@ -400,13 +412,17 @@ public class BonsaiArchiveFlatDbStrategy extends BonsaiFullFlatDbStrategy {
       final SegmentedKeyValueStorage storage,
       final SegmentedKeyValueStorageTransaction transaction,
       final Hash accountHash,
-      final Hash slotHash) {
+      final Hash slotHash,
+      final Optional<BonsaiContext> context) {
+
+    // Use passed context, or fall back to reading from storage if not provided
+    final BonsaiContext effectiveContext =
+        context.orElseGet(() -> getStateArchiveContextForWrite(storage).orElseThrow());
 
     // get natural key from account hash and slot key
     byte[] naturalKey = calculateNaturalSlotKey(accountHash, slotHash);
     // insert a key suffixed with block context, with 'deleted account' value
-    byte[] keySuffixed =
-        calculateArchiveKeyWithMinSuffix(getStateArchiveContextForWrite(storage).get(), naturalKey);
+    byte[] keySuffixed = calculateArchiveKeyWithMinSuffix(effectiveContext, naturalKey);
 
     transaction.put(ACCOUNT_STORAGE_STORAGE, keySuffixed, DELETED_STORAGE_VALUE);
   }

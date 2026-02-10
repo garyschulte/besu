@@ -21,6 +21,7 @@ import static org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIden
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.StorageSlotKey;
 import org.hyperledger.besu.ethereum.trie.NodeLoader;
+import org.hyperledger.besu.ethereum.trie.pathbased.common.BonsaiContext;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.storage.flat.CodeStorageStrategy;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.storage.flat.FlatDbStrategy;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
@@ -74,7 +75,9 @@ public abstract class BonsaiFlatDbStrategy extends FlatDbStrategy {
       final SegmentedKeyValueStorage storage,
       final SegmentedKeyValueStorageTransaction transaction,
       final Hash accountHash,
-      final Bytes accountValue) {
+      final Bytes accountValue,
+      final Optional<BonsaiContext> context) {
+    // Context not used in FULL/PARTIAL modes, only ARCHIVE mode
     transaction.put(
         ACCOUNT_INFO_STATE, accountHash.getBytes().toArrayUnsafe(), accountValue.toArrayUnsafe());
   }
@@ -83,7 +86,9 @@ public abstract class BonsaiFlatDbStrategy extends FlatDbStrategy {
   public void removeFlatAccount(
       final SegmentedKeyValueStorage storage,
       final SegmentedKeyValueStorageTransaction transaction,
-      final Hash accountHash) {
+      final Hash accountHash,
+      final Optional<BonsaiContext> context) {
+    // Context not used in FULL/PARTIAL modes, only ARCHIVE mode
     transaction.remove(ACCOUNT_INFO_STATE, accountHash.getBytes().toArrayUnsafe());
   }
 
@@ -93,7 +98,9 @@ public abstract class BonsaiFlatDbStrategy extends FlatDbStrategy {
       final SegmentedKeyValueStorageTransaction transaction,
       final Hash accountHash,
       final Hash slotHash,
-      final Bytes storageValue) {
+      final Bytes storageValue,
+      final Optional<BonsaiContext> context) {
+    // Context not used in FULL/PARTIAL modes, only ARCHIVE mode
     transaction.put(
         ACCOUNT_STORAGE_STORAGE,
         Bytes.concatenate(accountHash.getBytes(), slotHash.getBytes()).toArrayUnsafe(),
@@ -105,7 +112,9 @@ public abstract class BonsaiFlatDbStrategy extends FlatDbStrategy {
       final SegmentedKeyValueStorage storage,
       final SegmentedKeyValueStorageTransaction transaction,
       final Hash accountHash,
-      final Hash slotHash) {
+      final Hash slotHash,
+      final Optional<BonsaiContext> context) {
+    // Context not used in FULL/PARTIAL modes, only ARCHIVE mode
     transaction.remove(
         ACCOUNT_STORAGE_STORAGE,
         Bytes.concatenate(accountHash.getBytes(), slotHash.getBytes()).toArrayUnsafe());

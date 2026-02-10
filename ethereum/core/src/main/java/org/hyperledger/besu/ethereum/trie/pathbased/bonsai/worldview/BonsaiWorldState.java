@@ -31,6 +31,7 @@ import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.cache.CodeCache;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.cache.NoopBonsaiCachedMerkleTrieLoader;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.BonsaiWorldStateKeyValueStorage;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.BonsaiWorldStateLayerStorage;
+import org.hyperledger.besu.ethereum.trie.pathbased.common.BonsaiContext;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.PathBasedValue;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.cache.PathBasedCachedWorldStorageManager;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.storage.PathBasedWorldStateKeyValueStorage;
@@ -64,6 +65,7 @@ public class BonsaiWorldState extends PathBasedWorldState {
 
   protected BonsaiCachedMerkleTrieLoader bonsaiCachedMerkleTrieLoader;
   private final CodeCache codeCache;
+  private final Optional<BonsaiContext> bonsaiContext;
 
   public BonsaiWorldState(
       final BonsaiWorldStateProvider archive,
@@ -78,7 +80,8 @@ public class BonsaiWorldState extends PathBasedWorldState {
         archive.getTrieLogManager(),
         evmConfiguration,
         worldStateConfig,
-        codeCache);
+        codeCache,
+        Optional.empty());
   }
 
   public BonsaiWorldState(
@@ -89,9 +92,30 @@ public class BonsaiWorldState extends PathBasedWorldState {
       final EvmConfiguration evmConfiguration,
       final WorldStateConfig worldStateConfig,
       final CodeCache codeCache) {
+    this(
+        worldStateKeyValueStorage,
+        bonsaiCachedMerkleTrieLoader,
+        cachedWorldStorageManager,
+        trieLogManager,
+        evmConfiguration,
+        worldStateConfig,
+        codeCache,
+        Optional.empty());
+  }
+
+  public BonsaiWorldState(
+      final BonsaiWorldStateKeyValueStorage worldStateKeyValueStorage,
+      final BonsaiCachedMerkleTrieLoader bonsaiCachedMerkleTrieLoader,
+      final PathBasedCachedWorldStorageManager cachedWorldStorageManager,
+      final TrieLogManager trieLogManager,
+      final EvmConfiguration evmConfiguration,
+      final WorldStateConfig worldStateConfig,
+      final CodeCache codeCache,
+      final Optional<BonsaiContext> bonsaiContext) {
     super(worldStateKeyValueStorage, cachedWorldStorageManager, trieLogManager, worldStateConfig);
     this.bonsaiCachedMerkleTrieLoader = bonsaiCachedMerkleTrieLoader;
     this.worldStateKeyValueStorage = worldStateKeyValueStorage;
+    this.bonsaiContext = bonsaiContext;
     this.setAccumulator(
         new BonsaiWorldStateUpdateAccumulator(
             this,
@@ -104,6 +128,10 @@ public class BonsaiWorldState extends PathBasedWorldState {
             evmConfiguration,
             codeCache));
     this.codeCache = codeCache;
+  }
+
+  public Optional<BonsaiContext> getBonsaiContext() {
+    return bonsaiContext;
   }
 
   @Override
@@ -152,7 +180,7 @@ public class BonsaiWorldState extends PathBasedWorldState {
         createTrie(
             (location, hash) ->
                 bonsaiCachedMerkleTrieLoader.getAccountStateTrieNode(
-                    getWorldStateStorage(), location, hash),
+                    getWorldStateStorage(), location, hash, bonsaiContext),
             Bytes32.wrap(worldStateRootHash.getBytes()));
 
     // for manicured tries and composting, collect branches here (not implemented)
@@ -250,7 +278,7 @@ public class BonsaiWorldState extends PathBasedWorldState {
           createTrie(
               (location, key) ->
                   bonsaiCachedMerkleTrieLoader.getAccountStorageTrieNode(
-                      getWorldStateStorage(), updatedAddressHash, location, key),
+                      getWorldStateStorage(), updatedAddressHash, location, key, bonsaiContext),
               Bytes32.wrap(storageRoot.getBytes()));
 
       // for manicured tries and composting, collect branches here (not implemented)
@@ -391,7 +419,8 @@ public class BonsaiWorldState extends PathBasedWorldState {
 
   protected Optional<Bytes> getStorageTrieNode(
       final Hash accountHash, final Bytes location, final Bytes32 nodeHash) {
-    return getWorldStateStorage().getAccountStorageTrieNode(accountHash, location, nodeHash);
+    return getWorldStateStorage()
+        .getAccountStorageTrieNode(accountHash, location, nodeHash, bonsaiContext);
   }
 
   private void writeStorageTrieNode(

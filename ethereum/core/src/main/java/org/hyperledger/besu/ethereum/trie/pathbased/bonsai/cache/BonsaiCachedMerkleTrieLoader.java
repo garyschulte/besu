@@ -22,6 +22,7 @@ import org.hyperledger.besu.datatypes.StorageSlotKey;
 import org.hyperledger.besu.ethereum.trie.MerkleTrie;
 import org.hyperledger.besu.ethereum.trie.MerkleTrieException;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.BonsaiWorldStateKeyValueStorage;
+import org.hyperledger.besu.ethereum.trie.pathbased.common.BonsaiContext;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.StorageSubscriber;
 import org.hyperledger.besu.ethereum.trie.patricia.StoredMerklePatriciaTrie;
 import org.hyperledger.besu.metrics.ObservableMetricsSystem;
@@ -137,11 +138,21 @@ public class BonsaiCachedMerkleTrieLoader implements StorageSubscriber {
       final BonsaiWorldStateKeyValueStorage worldStateKeyValueStorage,
       final Bytes location,
       final Bytes32 nodeHash) {
+    return getAccountStateTrieNode(worldStateKeyValueStorage, location, nodeHash, Optional.empty());
+  }
+
+  public Optional<Bytes> getAccountStateTrieNode(
+      final BonsaiWorldStateKeyValueStorage worldStateKeyValueStorage,
+      final Bytes location,
+      final Bytes32 nodeHash,
+      final Optional<BonsaiContext> context) {
     if (nodeHash.equals(MerkleTrie.EMPTY_TRIE_NODE_HASH)) {
       return Optional.of(MerkleTrie.EMPTY_TRIE_NODE);
     } else {
       return Optional.ofNullable(accountNodes.getIfPresent(nodeHash))
-          .or(() -> worldStateKeyValueStorage.getAccountStateTrieNode(location, nodeHash));
+          .or(
+              () ->
+                  worldStateKeyValueStorage.getAccountStateTrieNode(location, nodeHash, context));
     }
   }
 
@@ -150,6 +161,16 @@ public class BonsaiCachedMerkleTrieLoader implements StorageSubscriber {
       final Hash accountHash,
       final Bytes location,
       final Bytes32 nodeHash) {
+    return getAccountStorageTrieNode(
+        worldStateKeyValueStorage, accountHash, location, nodeHash, Optional.empty());
+  }
+
+  public Optional<Bytes> getAccountStorageTrieNode(
+      final BonsaiWorldStateKeyValueStorage worldStateKeyValueStorage,
+      final Hash accountHash,
+      final Bytes location,
+      final Bytes32 nodeHash,
+      final Optional<BonsaiContext> context) {
     if (nodeHash.equals(MerkleTrie.EMPTY_TRIE_NODE_HASH)) {
       return Optional.of(MerkleTrie.EMPTY_TRIE_NODE);
     } else {
@@ -157,7 +178,7 @@ public class BonsaiCachedMerkleTrieLoader implements StorageSubscriber {
           .or(
               () ->
                   worldStateKeyValueStorage.getAccountStorageTrieNode(
-                      accountHash, location, nodeHash));
+                      accountHash, location, nodeHash, context));
     }
   }
 }

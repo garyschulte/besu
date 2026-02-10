@@ -206,6 +206,17 @@ public abstract class PathBasedWorldStateKeyValueStorage
   @Override
   public abstract Updater updater();
 
+  /**
+   * Creates an updater with explicit block context for versioned writes.
+   *
+   * @param context the BonsaiContext containing block number for versioning
+   * @return a new Updater instance with the given context
+   */
+  public Updater updater(final Optional<BonsaiContext> context) {
+    // Default implementation ignores context for backward compatibility
+    return updater();
+  }
+
   public boolean pruneTrieLog(final Hash blockHash) {
     try {
       return trieLogStorage.tryDelete(blockHash.getBytes().toArrayUnsafe());

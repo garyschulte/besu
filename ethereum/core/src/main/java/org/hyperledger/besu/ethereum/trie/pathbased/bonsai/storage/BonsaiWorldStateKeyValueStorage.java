@@ -27,6 +27,7 @@ import org.hyperledger.besu.ethereum.trie.MerkleTrie;
 import org.hyperledger.besu.ethereum.trie.common.PmtStateTrieAccountValue;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.flat.BonsaiFlatDbStrategy;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.flat.BonsaiFlatDbStrategyProvider;
+import org.hyperledger.besu.ethereum.trie.pathbased.common.BonsaiContext;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.storage.PathBasedWorldStateKeyValueStorage;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.storage.flat.FlatDbStrategy;
 import org.hyperledger.besu.ethereum.worldstate.DataStorageConfiguration;
@@ -102,9 +103,16 @@ public class BonsaiWorldStateKeyValueStorage extends PathBasedWorldStateKeyValue
   }
 
   public Optional<Bytes> getAccountStateTrieNode(final Bytes location, final Bytes32 nodeHash) {
+    return getAccountStateTrieNode(location, nodeHash, Optional.empty());
+  }
+
+  public Optional<Bytes> getAccountStateTrieNode(
+      final Bytes location, final Bytes32 nodeHash, final Optional<BonsaiContext> context) {
     if (nodeHash.equals(MerkleTrie.EMPTY_TRIE_NODE_HASH)) {
       return Optional.of(MerkleTrie.EMPTY_TRIE_NODE);
     } else {
+      // For now, context is not used for trie node reads in the base storage layer
+      // PostgreSQL plugin can override this behavior
       return composedWorldStateStorage
           .get(TRIE_BRANCH_STORAGE, location.toArrayUnsafe())
           .map(Bytes::wrap)
@@ -114,9 +122,19 @@ public class BonsaiWorldStateKeyValueStorage extends PathBasedWorldStateKeyValue
 
   public Optional<Bytes> getAccountStorageTrieNode(
       final Hash accountHash, final Bytes location, final Bytes32 nodeHash) {
+    return getAccountStorageTrieNode(accountHash, location, nodeHash, Optional.empty());
+  }
+
+  public Optional<Bytes> getAccountStorageTrieNode(
+      final Hash accountHash,
+      final Bytes location,
+      final Bytes32 nodeHash,
+      final Optional<BonsaiContext> context) {
     if (nodeHash.equals(MerkleTrie.EMPTY_TRIE_NODE_HASH)) {
       return Optional.of(MerkleTrie.EMPTY_TRIE_NODE);
     } else {
+      // For now, context is not used for trie node reads in the base storage layer
+      // PostgreSQL plugin can override this behavior
       return composedWorldStateStorage
           .get(
               TRIE_BRANCH_STORAGE,
@@ -186,11 +204,20 @@ public class BonsaiWorldStateKeyValueStorage extends PathBasedWorldStateKeyValue
 
   @Override
   public Updater updater() {
+    // Read current block number from storage as context
+    Optional<BonsaiContext> context =
+        getWorldStateBlockNumber().map(BonsaiContext::new);
+    return updater(context);
+  }
+
+  @Override
+  public Updater updater(final Optional<BonsaiContext> context) {
     return new Updater(
         composedWorldStateStorage.startTransaction(),
         trieLogStorage.startTransaction(),
         getFlatDbStrategy(),
-        composedWorldStateStorage);
+        composedWorldStateStorage,
+        context);
   }
 
   public static class Updater implements PathBasedWorldStateKeyValueStorage.Updater {
@@ -199,12 +226,27 @@ public class BonsaiWorldStateKeyValueStorage extends PathBasedWorldStateKeyValue
     private final KeyValueStorageTransaction trieLogStorageTransaction;
     private final FlatDbStrategy flatDbStrategy;
     private final SegmentedKeyValueStorage worldStorage;
+    private final Optional<BonsaiContext> context;
 
     public Updater(
         final SegmentedKeyValueStorageTransaction composedWorldStateTransaction,
         final KeyValueStorageTransaction trieLogStorageTransaction,
         final FlatDbStrategy flatDbStrategy,
         final SegmentedKeyValueStorage worldStorage) {
+      this(
+          composedWorldStateTransaction,
+          trieLogStorageTransaction,
+          flatDbStrategy,
+          worldStorage,
+          Optional.empty());
+    }
+
+    public Updater(
+        final SegmentedKeyValueStorageTransaction composedWorldStateTransaction,
+        final KeyValueStorageTransaction trieLogStorageTransaction,
+        final FlatDbStrategy flatDbStrategy,
+        final SegmentedKeyValueStorage worldStorage,
+        final Optional<BonsaiContext> context) {
 
       this.composedWorldStateTransaction = composedWorldStateTransaction;
       this.trieLogStorageTransaction = trieLogStorageTransaction;
@@ -212,6 +254,7 @@ public class BonsaiWorldStateKeyValueStorage extends PathBasedWorldStateKeyValue
       this.worldStorage =
           worldStorage; // An update could need to read from world storage to decide how to PUT to
       // it (i.e. Bonsai archive)
+      this.context = context;
     }
 
     public Updater removeCode(final Hash accountHash, final Hash codeHash) {
@@ -237,7 +280,8 @@ public class BonsaiWorldStateKeyValueStorage extends PathBasedWorldStateKeyValue
     }
 
     public Updater removeAccountInfoState(final Hash accountHash) {
-      flatDbStrategy.removeFlatAccount(worldStorage, composedWorldStateTransaction, accountHash);
+      flatDbStrategy.removeFlatAccount(
+          worldStorage, composedWorldStateTransaction, accountHash, context);
       return this;
     }
 
@@ -247,7 +291,7 @@ public class BonsaiWorldStateKeyValueStorage extends PathBasedWorldStateKeyValue
         return this;
       }
       flatDbStrategy.putFlatAccount(
-          worldStorage, composedWorldStateTransaction, accountHash, accountValue);
+          worldStorage, composedWorldStateTransaction, accountHash, accountValue, context);
       return this;
     }
 
@@ -294,14 +338,14 @@ public class BonsaiWorldStateKeyValueStorage extends PathBasedWorldStateKeyValue
     public synchronized Updater putStorageValueBySlotHash(
         final Hash accountHash, final Hash slotHash, final Bytes storageValue) {
       flatDbStrategy.putFlatAccountStorageValueByStorageSlotHash(
-          worldStorage, composedWorldStateTransaction, accountHash, slotHash, storageValue);
+          worldStorage, composedWorldStateTransaction, accountHash, slotHash, storageValue, context);
       return this;
     }
 
     public synchronized void removeStorageValueBySlotHash(
         final Hash accountHash, final Hash slotHash) {
       flatDbStrategy.removeFlatAccountStorageValueByStorageSlotHash(
-          worldStorage, composedWorldStateTransaction, accountHash, slotHash);
+          worldStorage, composedWorldStateTransaction, accountHash, slotHash, context);
     }
 
     @Override

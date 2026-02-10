@@ -26,6 +26,7 @@ import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.MutableWorldState;
 import org.hyperledger.besu.ethereum.mainnet.staterootcommitter.StateRootCommitter;
 import org.hyperledger.besu.ethereum.trie.common.StateRootMismatchException;
+import org.hyperledger.besu.ethereum.trie.pathbased.common.BonsaiContext;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.StorageSubscriber;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.cache.PathBasedCachedWorldStorageManager;
 import org.hyperledger.besu.ethereum.trie.pathbased.common.storage.PathBasedLayeredWorldStateKeyValueStorage;
@@ -215,8 +216,12 @@ public abstract class PathBasedWorldState
 
     boolean success = false;
 
+    // Create context from block header for archive writes
+    final Optional<BonsaiContext> context =
+        maybeBlockHeader.map(header -> new BonsaiContext(header.getNumber()));
+
     final PathBasedWorldStateKeyValueStorage.Updater stateUpdater =
-        worldStateKeyValueStorage.updater();
+        worldStateKeyValueStorage.updater(context);
     Runnable saveTrieLog = () -> {};
     Runnable cacheWorldState = () -> {};
 

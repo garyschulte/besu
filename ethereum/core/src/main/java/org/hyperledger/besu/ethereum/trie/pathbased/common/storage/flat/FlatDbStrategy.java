@@ -15,6 +15,7 @@
 package org.hyperledger.besu.ethereum.trie.pathbased.common.storage.flat;
 
 import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.ethereum.trie.pathbased.common.BonsaiContext;
 import org.hyperledger.besu.metrics.BesuMetricCategory;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.metrics.Counter;
@@ -125,12 +126,14 @@ public abstract class FlatDbStrategy {
       final SegmentedKeyValueStorage storage,
       final SegmentedKeyValueStorageTransaction transaction,
       final Hash accountHash,
-      final Bytes accountValue);
+      final Bytes accountValue,
+      final Optional<BonsaiContext> context);
 
   public abstract void removeFlatAccount(
       final SegmentedKeyValueStorage storage,
       final SegmentedKeyValueStorageTransaction transaction,
-      final Hash accountHash);
+      final Hash accountHash,
+      final Optional<BonsaiContext> context);
 
   /*
    * Puts the storage value for the given account hash and storage slot key, using the world state root hash supplier, storage root supplier, and node loader.
@@ -140,7 +143,8 @@ public abstract class FlatDbStrategy {
       final SegmentedKeyValueStorageTransaction transaction,
       final Hash accountHash,
       final Hash slotHash,
-      final Bytes storageValue);
+      final Bytes storageValue,
+      final Optional<BonsaiContext> context);
 
   /*
    * Removes the storage value for the given account hash and storage slot key, using the world state root hash supplier, storage root supplier, and node loader.
@@ -149,7 +153,8 @@ public abstract class FlatDbStrategy {
       final SegmentedKeyValueStorage storage,
       final SegmentedKeyValueStorageTransaction transaction,
       final Hash accountHash,
-      final Hash slotHash);
+      final Hash slotHash,
+      final Optional<BonsaiContext> context);
 
   public abstract void clearAll(final SegmentedKeyValueStorage storage);
 
