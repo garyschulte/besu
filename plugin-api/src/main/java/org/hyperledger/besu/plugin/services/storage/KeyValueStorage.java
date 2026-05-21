@@ -18,8 +18,10 @@ import org.hyperledger.besu.plugin.Unstable;
 import org.hyperledger.besu.plugin.services.exception.StorageException;
 
 import java.io.Closeable;
+import java.lang.foreign.MemorySegment;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -62,6 +64,31 @@ public interface KeyValueStorage extends Closeable {
    * @throws StorageException problem encountered during the retrieval attempt.
    */
   Optional<byte[]> get(byte[] key) throws StorageException;
+
+  /**
+   * Reads the value for the given key by passing a {@link MemorySegment} view of the stored bytes
+   * to the supplied {@code reader} function, then returns the reader's result wrapped in an {@link
+   * Optional}.
+   *
+   * <p><strong>Lifetime contract:</strong> the {@code MemorySegment} passed to {@code reader} is
+   * only valid for the duration of the {@code reader} invocation. Do not retain the segment, or any
+   * slice of it, past the return of {@code reader} — doing so is undefined behaviour and may cause
+   * a JVM crash.
+   *
+   * <p>The default implementation materialises the value into a heap {@code byte[]} via {@link
+   * #get(byte[])} and wraps it with {@link MemorySegment#ofArray(byte[])}. A native-FFM storage
+   * plugin may override this to avoid the heap copy.
+   *
+   * @param <T> the type returned by the reader
+   * @param key the lookup key
+   * @param reader a function that consumes the value's {@link MemorySegment} and produces a result
+   * @return an {@link Optional} containing the reader's result, or empty if the key is absent
+   * @throws StorageException if an error occurs during the retrieval attempt
+   */
+  default <T> Optional<T> getWithReader(final byte[] key, final Function<MemorySegment, T> reader)
+      throws StorageException {
+    return get(key).map(b -> reader.apply(MemorySegment.ofArray(b)));
+  }
 
   /**
    * Returns a stream of all keys and values.

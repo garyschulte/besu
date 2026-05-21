@@ -164,6 +164,7 @@ import org.hyperledger.besu.plugin.services.exception.StorageException;
 import org.hyperledger.besu.plugin.services.securitymodule.SecurityModule;
 import org.hyperledger.besu.plugin.services.storage.DataStorageFormat;
 import org.hyperledger.besu.plugin.services.storage.rocksdb.RocksDBPlugin;
+import org.hyperledger.besu.plugin.services.storage.rocksdbffm.RocksDBFfmPlugin;
 import org.hyperledger.besu.services.BesuConfigurationImpl;
 import org.hyperledger.besu.services.BesuPluginContextImpl;
 import org.hyperledger.besu.services.BesuPluginServiceRegistrar;
@@ -1267,6 +1268,7 @@ public class BesuCommand implements DefaultCommandValues, Runnable {
     // register built-in plugins
     rocksDBPlugin = new RocksDBPlugin();
     rocksDBPlugin.register(besuPluginContext);
+    new RocksDBFfmPlugin().register(besuPluginContext);
     new InMemoryStoragePlugin().register(besuPluginContext);
 
     // register default security module

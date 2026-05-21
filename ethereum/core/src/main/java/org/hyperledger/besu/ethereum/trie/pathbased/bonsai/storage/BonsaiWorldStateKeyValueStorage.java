@@ -43,6 +43,7 @@ import org.hyperledger.besu.plugin.services.storage.SegmentedKeyValueStorage;
 import org.hyperledger.besu.plugin.services.storage.SegmentedKeyValueStorageTransaction;
 import org.hyperledger.besu.plugin.services.storage.WorldStateKeyValueStorage;
 
+import java.lang.foreign.ValueLayout;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -196,8 +197,10 @@ public class BonsaiWorldStateKeyValueStorage extends PathBasedWorldStateKeyValue
       return Optional.of(MerkleTrie.EMPTY_TRIE_NODE);
     }
     return composedWorldStateStorage
-        .get(TRIE_BRANCH_STORAGE, location.toArrayUnsafe())
-        .map(Bytes::wrap)
+        .getWithReader(
+            TRIE_BRANCH_STORAGE,
+            location.toArrayUnsafe(),
+            seg -> Bytes.wrap(seg.toArray(ValueLayout.JAVA_BYTE)))
         .filter(b -> Hash.hash(b).getBytes().equals(nodeHash));
   }
 
@@ -207,15 +210,18 @@ public class BonsaiWorldStateKeyValueStorage extends PathBasedWorldStateKeyValue
       return Optional.of(MerkleTrie.EMPTY_TRIE_NODE);
     }
     return composedWorldStateStorage
-        .get(
+        .getWithReader(
             TRIE_BRANCH_STORAGE,
-            Bytes.concatenate(accountHash.getBytes(), location).toArrayUnsafe())
-        .map(Bytes::wrap)
+            Bytes.concatenate(accountHash.getBytes(), location).toArrayUnsafe(),
+            seg -> Bytes.wrap(seg.toArray(ValueLayout.JAVA_BYTE)))
         .filter(b -> Hash.hash(b).getBytes().equals(nodeHash));
   }
 
   public Optional<Bytes> getTrieNodeUnsafe(final Bytes key) {
-    return composedWorldStateStorage.get(TRIE_BRANCH_STORAGE, key.toArrayUnsafe()).map(Bytes::wrap);
+    return composedWorldStateStorage.getWithReader(
+        TRIE_BRANCH_STORAGE,
+        key.toArrayUnsafe(),
+        seg -> Bytes.wrap(seg.toArray(ValueLayout.JAVA_BYTE)));
   }
 
   public NavigableMap<Bytes32, AccountStorageEntry> storageEntriesFrom(
