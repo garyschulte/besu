@@ -42,6 +42,7 @@ import java.util.stream.Stream;
 import io.github.dfa1.rocksdbffm.BlockBasedTableOptions;
 import io.github.dfa1.rocksdbffm.ColumnFamilyDescriptor;
 import io.github.dfa1.rocksdbffm.ColumnFamilyHandle;
+import io.github.dfa1.rocksdbffm.CompressionType;
 import io.github.dfa1.rocksdbffm.FilterPolicy;
 import io.github.dfa1.rocksdbffm.LRUCache;
 import io.github.dfa1.rocksdbffm.MemorySize;
@@ -130,6 +131,17 @@ public class RocksDBFfmColumnarKeyValueStorage
         .setBlockSize(MemorySize.ofBytes(ROCKSDB_BLOCK_SIZE));
   }
 
+  private Options createCfOptions(
+      final SegmentIdentifier segment, final RocksDBFactoryConfiguration config) {
+    final Options cfOpts = Options.newOptions().setCreateIfMissing(true);
+    try (BlockBasedTableOptions tableOpts = createTableOptions(segment, config)) {
+      cfOpts.setTableFormatConfig(tableOpts);
+    }
+    cfOpts.setCompression(CompressionType.LZ4);
+    cfOpts.setLevelCompactionDynamicLevelBytes(true);
+    return cfOpts;
+  }
+
   /**
    * Opens the DB with all existing column families, then creates any that are missing from the
    * requested segments list. Per-segment {@link BlockBasedTableOptions} (with a bounded
@@ -169,10 +181,7 @@ public class RocksDBFfmColumnarKeyValueStorage
         final String name = new String(cfName, StandardCharsets.UTF_8);
         final SegmentIdentifier seg = segsByName.get(name);
         if (seg != null) {
-          final Options cfOpts = Options.newOptions().setCreateIfMissing(true);
-          try (BlockBasedTableOptions tableOpts = createTableOptions(seg, rocksDBConfig)) {
-            cfOpts.setTableFormatConfig(tableOpts);
-          }
+          final Options cfOpts = createCfOptions(seg, rocksDBConfig);
           openDescriptors.add(ColumnFamilyDescriptor.of(cfName, cfOpts));
           perCfOptions.add(cfOpts);
         } else {
@@ -208,10 +217,7 @@ public class RocksDBFfmColumnarKeyValueStorage
       if (handle != null) {
         cfMap.put(seg, handle);
       } else {
-        final Options newCfOpts = Options.newOptions().setCreateIfMissing(true);
-        try (BlockBasedTableOptions tableOpts = createTableOptions(seg, rocksDBConfig)) {
-          newCfOpts.setTableFormatConfig(tableOpts);
-        }
+        final Options newCfOpts = createCfOptions(seg, rocksDBConfig);
         cfMap.put(seg, txDb.createColumnFamily(ColumnFamilyDescriptor.of(seg.getId(), newCfOpts)));
         newCfOpts.close();
       }
