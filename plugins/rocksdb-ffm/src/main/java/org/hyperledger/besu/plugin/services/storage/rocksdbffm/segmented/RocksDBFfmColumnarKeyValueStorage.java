@@ -75,6 +75,9 @@ public class RocksDBFfmColumnarKeyValueStorage
   private static final long ROCKSDB_BLOCK_SIZE = 32768;
   private static final long ROCKSDB_BLOCKCACHE_SIZE_HIGH_SPEC = 1_073_741_824L;
   private static final long WAL_MAX_TOTAL_SIZE = 1_073_741_824L;
+  // Must be >= write_buffer_size so OptimisticTransactionDB conflict detection
+  // always has history back to any live transaction's start sequence number.
+  private static final long WRITE_BUFFER_SIZE_TO_MAINTAIN = 67_108_864L; // 64 MiB
 
   private final OptimisticTransactionDB db;
   private final Map<SegmentIdentifier, ColumnFamilyHandle> cfHandles;
@@ -139,6 +142,7 @@ public class RocksDBFfmColumnarKeyValueStorage
     }
     cfOpts.setCompression(CompressionType.LZ4);
     cfOpts.setLevelCompactionDynamicLevelBytes(true);
+    cfOpts.setMaxWriteBufferSizeToMaintain(WRITE_BUFFER_SIZE_TO_MAINTAIN);
     return cfOpts;
   }
 
