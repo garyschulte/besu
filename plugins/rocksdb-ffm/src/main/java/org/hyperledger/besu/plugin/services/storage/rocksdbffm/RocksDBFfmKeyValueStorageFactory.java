@@ -21,11 +21,13 @@ import org.hyperledger.besu.plugin.services.storage.KeyValueStorage;
 import org.hyperledger.besu.plugin.services.storage.KeyValueStorageFactory;
 import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier;
 import org.hyperledger.besu.plugin.services.storage.SegmentedKeyValueStorage;
+import org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.RocksDBFactoryConfiguration;
 import org.hyperledger.besu.plugin.services.storage.rocksdbffm.segmented.RocksDBFfmColumnarKeyValueStorage;
 import org.hyperledger.besu.services.kvstore.SegmentedKeyValueStorageAdapter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,15 +42,20 @@ public class RocksDBFfmKeyValueStorageFactory implements KeyValueStorageFactory 
   static final String NAME = "rocksdb-ffm";
 
   private final List<SegmentIdentifier> configuredSegments;
+  private final Supplier<RocksDBFactoryConfiguration> configuration;
   private RocksDBFfmColumnarKeyValueStorage segmentedStorage;
 
   /**
    * Creates a new factory.
    *
    * @param configuredSegments all segment identifiers that this storage should expose
+   * @param configuration supplier for RocksDB tuning parameters (cache size, open files, etc.)
    */
-  public RocksDBFfmKeyValueStorageFactory(final List<SegmentIdentifier> configuredSegments) {
+  public RocksDBFfmKeyValueStorageFactory(
+      final List<SegmentIdentifier> configuredSegments,
+      final Supplier<RocksDBFactoryConfiguration> configuration) {
     this.configuredSegments = configuredSegments;
+    this.configuration = configuration;
   }
 
   @Override
@@ -75,7 +82,7 @@ public class RocksDBFfmKeyValueStorageFactory implements KeyValueStorageFactory 
     if (segmentedStorage == null) {
       segmentedStorage =
           new RocksDBFfmColumnarKeyValueStorage(
-              commonConfiguration.getStoragePath(), configuredSegments);
+              commonConfiguration.getStoragePath(), configuredSegments, configuration.get());
       LOG.info("Opened rocksdb-ffm storage at {}", commonConfiguration.getStoragePath());
     }
     return segmentedStorage;

@@ -17,6 +17,7 @@ package org.hyperledger.besu.plugin.services.storage.rocksdbffm;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.StorageService;
+import org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.RocksDBCLIOptions;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -67,7 +68,10 @@ public class RocksDBFfmPlugin implements BesuPlugin {
     final Optional<StorageService> storageService = context.getService(StorageService.class);
     storageService.ifPresentOrElse(
         service -> {
-          factory = new RocksDBFfmKeyValueStorageFactory(service.getAllSegmentIdentifiers());
+          factory =
+              new RocksDBFfmKeyValueStorageFactory(
+                  service.getAllSegmentIdentifiers(),
+                  () -> RocksDBCLIOptions.create().toDomainObject());
           service.registerKeyValueStorage(factory);
         },
         () -> LOG.error("Failed to register rocksdb-ffm factory: StorageService not found"));

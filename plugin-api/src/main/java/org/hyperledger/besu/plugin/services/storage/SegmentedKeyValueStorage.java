@@ -94,9 +94,7 @@ public interface SegmentedKeyValueStorage extends Closeable {
    * @throws StorageException if an error occurs during the retrieval attempt
    */
   default <T> Optional<T> getWithReader(
-      final SegmentIdentifier segment,
-      final byte[] key,
-      final Function<MemorySegment, T> reader)
+      final SegmentIdentifier segment, final byte[] key, final Function<MemorySegment, T> reader)
       throws StorageException {
     return get(segment, key).map(b -> reader.apply(MemorySegment.ofArray(b)));
   }

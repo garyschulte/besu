@@ -39,8 +39,12 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import io.github.dfa1.rocksdbffm.BlockBasedTableOptions;
 import io.github.dfa1.rocksdbffm.ColumnFamilyDescriptor;
 import io.github.dfa1.rocksdbffm.ColumnFamilyHandle;
+import io.github.dfa1.rocksdbffm.FilterPolicy;
+import io.github.dfa1.rocksdbffm.LRUCache;
+import io.github.dfa1.rocksdbffm.MemorySize;
 import io.github.dfa1.rocksdbffm.OptimisticTransactionDB;
 import io.github.dfa1.rocksdbffm.Options;
 import io.github.dfa1.rocksdbffm.ReadOptions;
@@ -48,6 +52,7 @@ import io.github.dfa1.rocksdbffm.RocksDB;
 import io.github.dfa1.rocksdbffm.WriteOptions;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.tuweni.bytes.Bytes;
+import org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.RocksDBFactoryConfiguration;
 import org.hyperledger.besu.services.kvstore.SegmentedKeyValueStorageTransactionValidatorDecorator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,25 +69,42 @@ public class RocksDBFfmColumnarKeyValueStorage
   private static final Logger LOG =
       LoggerFactory.getLogger(RocksDBFfmColumnarKeyValueStorage.class);
 
+  // Mirrors RocksDBColumnarKeyValueStorage constants
+  private static final int ROCKSDB_FORMAT_VERSION = 5;
+  private static final long ROCKSDB_BLOCK_SIZE = 32768;
+  private static final long ROCKSDB_BLOCKCACHE_SIZE_HIGH_SPEC = 1_073_741_824L;
+  private static final long WAL_MAX_TOTAL_SIZE = 1_073_741_824L;
+
   private final OptimisticTransactionDB db;
   private final Map<SegmentIdentifier, ColumnFamilyHandle> cfHandles;
   private final ReadOptions defaultReadOptions;
   private final WriteOptions defaultWriteOptions;
+  private final List<LRUCache> blockCaches = new ArrayList<>();
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   /**
    * Opens (or creates) the database at the given path, ensuring a column family exists for every
-   * requested segment.
+   * requested segment. RocksDB is configured with a per-segment bounded block cache and WAL cap
+   * drawn from {@code rocksDBConfig} so that native memory usage stays within predictable limits.
    *
    * @param dbPath path to the RocksDB directory
    * @param segments segment identifiers to expose; must include the DEFAULT segment
+   * @param rocksDBConfig RocksDB tuning parameters (cache capacity, max open files, etc.)
    * @throws StorageException if the database cannot be opened
    */
   public RocksDBFfmColumnarKeyValueStorage(
-      final Path dbPath, final List<SegmentIdentifier> segments) throws StorageException {
-    try (Options opts = Options.newOptions().setCreateIfMissing(true)) {
+      final Path dbPath,
+      final List<SegmentIdentifier> segments,
+      final RocksDBFactoryConfiguration rocksDBConfig)
+      throws StorageException {
+    try (Options opts =
+        Options.newOptions()
+            .setCreateIfMissing(true)
+            .setCreateMissingColumnFamilies(true)
+            .setMaxOpenFiles(rocksDBConfig.getMaxOpenFiles())
+            .setMaxTotalWalSize(WAL_MAX_TOTAL_SIZE)) {
       this.cfHandles = new HashMap<>();
-      this.db = openWithSegments(opts, dbPath, segments, cfHandles);
+      this.db = openWithSegments(opts, dbPath, segments, cfHandles, rocksDBConfig);
       this.defaultReadOptions = ReadOptions.newReadOptions();
       this.defaultWriteOptions = WriteOptions.newWriteOptions();
     } catch (final io.github.dfa1.rocksdbffm.RocksDBException e) {
@@ -90,15 +112,41 @@ public class RocksDBFfmColumnarKeyValueStorage
     }
   }
 
+  private BlockBasedTableOptions createTableOptions(
+      final SegmentIdentifier segment, final RocksDBFactoryConfiguration config) {
+    final long cacheSize =
+        config.isHighSpec() && segment.isEligibleToHighSpecFlag()
+            ? ROCKSDB_BLOCKCACHE_SIZE_HIGH_SPEC
+            : config.getCacheCapacity();
+    final LRUCache cache = LRUCache.newLRUCache(MemorySize.ofBytes(cacheSize));
+    blockCaches.add(cache);
+    // FilterPolicy ownership transfers to BlockBasedTableOptions on setFilterPolicy; do not close it.
+    return BlockBasedTableOptions.newBlockBasedConfig()
+        .setFormatVersion(ROCKSDB_FORMAT_VERSION)
+        .setBlockCache(cache)
+        .setFilterPolicy(FilterPolicy.newBloom(10))
+        .setPartitionFilters(true)
+        .setCacheIndexAndFilterBlocks(segment.isCacheIndexAndFilterBlocks())
+        .setBlockSize(MemorySize.ofBytes(ROCKSDB_BLOCK_SIZE));
+  }
+
   /**
    * Opens the DB with all existing column families, then creates any that are missing from the
-   * requested segments list.
+   * requested segments list. Per-segment {@link BlockBasedTableOptions} (with a bounded
+   * {@link LRUCache}) are applied to each column family descriptor before open.
    */
-  private static OptimisticTransactionDB openWithSegments(
+  private OptimisticTransactionDB openWithSegments(
       final Options opts,
       final Path dbPath,
       final List<SegmentIdentifier> requestedSegments,
-      final Map<SegmentIdentifier, ColumnFamilyHandle> cfMap) {
+      final Map<SegmentIdentifier, ColumnFamilyHandle> cfMap,
+      final RocksDBFactoryConfiguration rocksDBConfig) {
+
+    // Build lookup: CF name → segment (for requested segments only)
+    final Map<String, SegmentIdentifier> segsByName = new HashMap<>();
+    for (final SegmentIdentifier seg : requestedSegments) {
+      segsByName.put(new String(seg.getId(), StandardCharsets.UTF_8), seg);
+    }
 
     // Find CFs already present in the DB (empty list for a fresh DB or non-existent path)
     List<byte[]> existingCfBytes;
@@ -110,45 +158,67 @@ public class RocksDBFfmColumnarKeyValueStorage
 
     // Build the descriptor list for the open call — must include every CF that exists in the DB.
     // For a fresh (empty) DB we seed with just "default".
-    List<ColumnFamilyDescriptor> openDescriptors = new ArrayList<>();
+    // For known segments, attach per-CF Options with a bounded block cache.
+    final List<ColumnFamilyDescriptor> openDescriptors = new ArrayList<>();
+    final List<Options> perCfOptions = new ArrayList<>(); // closed after open
     if (existingCfBytes.isEmpty()) {
       openDescriptors.add(ColumnFamilyDescriptor.of("default"));
+      perCfOptions.add(null);
     } else {
-      for (byte[] cfName : existingCfBytes) {
-        openDescriptors.add(ColumnFamilyDescriptor.of(cfName));
+      for (final byte[] cfName : existingCfBytes) {
+        final String name = new String(cfName, StandardCharsets.UTF_8);
+        final SegmentIdentifier seg = segsByName.get(name);
+        if (seg != null) {
+          final Options cfOpts = Options.newOptions().setCreateIfMissing(true);
+          try (BlockBasedTableOptions tableOpts = createTableOptions(seg, rocksDBConfig)) {
+            cfOpts.setTableFormatConfig(tableOpts);
+          }
+          openDescriptors.add(ColumnFamilyDescriptor.of(cfName, cfOpts));
+          perCfOptions.add(cfOpts);
+        } else {
+          openDescriptors.add(ColumnFamilyDescriptor.of(cfName));
+          perCfOptions.add(null);
+        }
       }
     }
 
     // Open the DB
-    List<ColumnFamilyHandle> openHandles = new ArrayList<>();
-    OptimisticTransactionDB txDb =
+    final List<ColumnFamilyHandle> openHandles = new ArrayList<>();
+    final OptimisticTransactionDB txDb =
         RocksDB.openOptimisticWithColumnFamilies(opts, dbPath, openDescriptors, openHandles);
 
-    // Map requested segments to the handles returned by the open call
-    Map<String, ColumnFamilyHandle> handlesByName = new HashMap<>();
+    // Per-CF Options are no longer needed once the DB is open; RocksDB copied what it needed.
+    for (final Options cfOpts : perCfOptions) {
+      if (cfOpts != null) {
+        cfOpts.close();
+      }
+    }
+
+    // Map CF name → handle
+    final Map<String, ColumnFamilyHandle> handlesByName = new HashMap<>();
     for (int i = 0; i < openDescriptors.size(); i++) {
       handlesByName.put(
           new String(openDescriptors.get(i).name(), StandardCharsets.UTF_8), openHandles.get(i));
     }
 
-    // Build segment → handle map; create any CFs that don't exist yet
-    Map<String, SegmentIdentifier> segsByName = new HashMap<>();
-    for (SegmentIdentifier seg : requestedSegments) {
-      segsByName.put(new String(seg.getId(), StandardCharsets.UTF_8), seg);
-    }
-
-    for (SegmentIdentifier seg : requestedSegments) {
-      String name = new String(seg.getId(), StandardCharsets.UTF_8);
-      ColumnFamilyHandle handle = handlesByName.get(name);
+    // Wire segment → handle; create any CFs that don't exist yet (new segments added to a DB)
+    for (final SegmentIdentifier seg : requestedSegments) {
+      final String name = new String(seg.getId(), StandardCharsets.UTF_8);
+      final ColumnFamilyHandle handle = handlesByName.get(name);
       if (handle != null) {
         cfMap.put(seg, handle);
       } else {
-        cfMap.put(seg, txDb.createColumnFamily(ColumnFamilyDescriptor.of(seg.getId())));
+        final Options newCfOpts = Options.newOptions().setCreateIfMissing(true);
+        try (BlockBasedTableOptions tableOpts = createTableOptions(seg, rocksDBConfig)) {
+          newCfOpts.setTableFormatConfig(tableOpts);
+        }
+        cfMap.put(seg, txDb.createColumnFamily(ColumnFamilyDescriptor.of(seg.getId(), newCfOpts)));
+        newCfOpts.close();
       }
     }
 
     // Close handles for CFs that exist in the DB but weren't in the requested segments list
-    for (Map.Entry<String, ColumnFamilyHandle> entry : handlesByName.entrySet()) {
+    for (final Map.Entry<String, ColumnFamilyHandle> entry : handlesByName.entrySet()) {
       if (!segsByName.containsKey(entry.getKey())) {
         try {
           entry.getValue().close();
@@ -313,7 +383,7 @@ public class RocksDBFfmColumnarKeyValueStorage
     if (closed.compareAndSet(false, true)) {
       defaultReadOptions.close();
       defaultWriteOptions.close();
-      for (ColumnFamilyHandle handle : cfHandles.values()) {
+      for (final ColumnFamilyHandle handle : cfHandles.values()) {
         try {
           handle.close();
         } catch (Exception e) {
@@ -321,6 +391,7 @@ public class RocksDBFfmColumnarKeyValueStorage
         }
       }
       db.close();
+      blockCaches.forEach(LRUCache::close);
     }
   }
 
