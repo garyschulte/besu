@@ -42,7 +42,9 @@ dependencies {
 
   // rocksdbffm: FFM-based RocksDB binding (local SNAPSHOT install via ./mvnw install)
   implementation 'io.github.dfa1:rocksdbffm-core:0.6-SNAPSHOT'
-  implementation 'io.github.dfa1:rocksdbffm-native-osx-aarch64:0.6-SNAPSHOT'
+  runtimeOnly 'io.github.dfa1:rocksdbffm-native-osx-aarch64:0.6-SNAPSHOT'
+  runtimeOnly 'io.github.dfa1:rocksdbffm-native-linux-x86_64:0.6-SNAPSHOT'
+  runtimeOnly 'io.github.dfa1:rocksdbffm-native-linux-aarch64:0.6-SNAPSHOT'
 
   testImplementation project(':testutil')
   testImplementation 'org.junit.jupiter:junit-jupiter'
