@@ -58,6 +58,11 @@ public class RocksDBFfmTransaction implements SegmentedKeyValueStorageTransactio
       txn.commit();
     } catch (final io.github.dfa1.rocksdbffm.RocksDBException e) {
       throw new StorageException(e);
+    } finally {
+      // rocksdbffm's NativeObject has no Cleaner; rocksdb_transaction_destroy must be
+      // called explicitly. The decorator's close() guard throws after commit, so this
+      // is the only reliable point to release the native transaction pointer.
+      txn.close();
     }
   }
 
