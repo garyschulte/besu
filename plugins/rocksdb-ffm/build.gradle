@@ -36,6 +36,8 @@ dependencies {
   implementation project(':services:kvstore')
   implementation project(':util')
 
+  implementation project(':ethereum:core')
+
   implementation 'com.google.guava:guava'
   implementation 'info.picocli:picocli'
   implementation 'io.consensys.tuweni:tuweni-bytes'

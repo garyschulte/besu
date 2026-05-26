@@ -15,6 +15,7 @@
 package org.hyperledger.besu.plugin.services.storage.rocksdbffm.segmented;
 
 import static java.util.stream.Collectors.toUnmodifiableSet;
+import static org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIdentifier.BLOCKCHAIN;
 
 import org.hyperledger.besu.plugin.services.exception.StorageException;
 import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier;
@@ -158,7 +159,31 @@ public class RocksDBFfmColumnarKeyValueStorage
     cfOpts.setCompression(CompressionType.LZ4);
     cfOpts.setLevelCompactionDynamicLevelBytes(true);
     cfOpts.setMaxWriteBufferSizeToMaintain(WRITE_BUFFER_SIZE_TO_MAINTAIN);
+    if (segment.containsStaticData()) {
+      configureBlobDBForSegment(segment, config, cfOpts);
+    }
     return cfOpts;
+  }
+
+  private static void configureBlobDBForSegment(
+      final SegmentIdentifier segment,
+      final RocksDBFactoryConfiguration config,
+      final Options opts) {
+    opts.setEnableBlobFiles(true)
+        .setEnableBlobGc(isStaticDataGarbageCollectionEnabled(segment, config))
+        .setMinBlobSize(MemorySize.ofBytes(100))
+        .setBlobCompressionType(CompressionType.LZ4);
+    config.getBlobGarbageCollectionAgeCutoff().ifPresent(opts::setBlobGcAgeCutoff);
+    config.getBlobGarbageCollectionForceThreshold().ifPresent(opts::setBlobGcForceThreshold);
+  }
+
+  private static boolean isStaticDataGarbageCollectionEnabled(
+      final SegmentIdentifier segment, final RocksDBFactoryConfiguration config) {
+    if (BLOCKCHAIN.getName().equals(segment.getName())
+        && config.isBlockchainGarbageCollectionEnabled()) {
+      return true;
+    }
+    return segment.isStaticDataGarbageCollectionEnabled();
   }
 
   /**
