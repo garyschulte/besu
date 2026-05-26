@@ -22,23 +22,41 @@ import java.util.function.Function;
 
 import io.github.dfa1.rocksdbffm.ColumnFamilyHandle;
 import io.github.dfa1.rocksdbffm.Transaction;
+import io.github.dfa1.rocksdbffm.WriteOptions;
 
 /** Adapts a rocksdbffm {@link Transaction} to Besu's {@link SegmentedKeyValueStorageTransaction}. */
 public class RocksDBFfmTransaction implements SegmentedKeyValueStorageTransaction {
 
   private final Function<SegmentIdentifier, ColumnFamilyHandle> cfMapper;
   private final Transaction txn;
+  private final WriteOptions ownedWriteOptions;
 
   /**
-   * Creates a new transaction wrapper.
+   * Creates a new transaction wrapper with shared write options (not closed on transaction end).
    *
    * @param cfMapper maps a {@link SegmentIdentifier} to its {@link ColumnFamilyHandle}
    * @param txn the underlying rocksdbffm transaction
    */
   public RocksDBFfmTransaction(
       final Function<SegmentIdentifier, ColumnFamilyHandle> cfMapper, final Transaction txn) {
+    this(cfMapper, txn, null);
+  }
+
+  /**
+   * Creates a new transaction wrapper that takes ownership of the supplied write options and closes
+   * them when the transaction ends. Used for per-transaction options such as low-priority writes.
+   *
+   * @param cfMapper maps a {@link SegmentIdentifier} to its {@link ColumnFamilyHandle}
+   * @param txn the underlying rocksdbffm transaction
+   * @param ownedWriteOptions write options to close on transaction end, or {@code null} if shared
+   */
+  public RocksDBFfmTransaction(
+      final Function<SegmentIdentifier, ColumnFamilyHandle> cfMapper,
+      final Transaction txn,
+      final WriteOptions ownedWriteOptions) {
     this.cfMapper = cfMapper;
     this.txn = txn;
+    this.ownedWriteOptions = ownedWriteOptions;
   }
 
   @Override
@@ -63,6 +81,9 @@ public class RocksDBFfmTransaction implements SegmentedKeyValueStorageTransactio
       // called explicitly. The decorator's close() guard throws after commit, so this
       // is the only reliable point to release the native transaction pointer.
       txn.close();
+      if (ownedWriteOptions != null) {
+        ownedWriteOptions.close();
+      }
     }
   }
 
@@ -74,5 +95,8 @@ public class RocksDBFfmTransaction implements SegmentedKeyValueStorageTransactio
   @Override
   public void close() {
     txn.close();
+    if (ownedWriteOptions != null) {
+      ownedWriteOptions.close();
+    }
   }
 }

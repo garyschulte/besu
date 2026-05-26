@@ -43,6 +43,7 @@ import io.github.dfa1.rocksdbffm.BlockBasedTableOptions;
 import io.github.dfa1.rocksdbffm.ColumnFamilyDescriptor;
 import io.github.dfa1.rocksdbffm.ColumnFamilyHandle;
 import io.github.dfa1.rocksdbffm.CompressionType;
+import io.github.dfa1.rocksdbffm.Env;
 import io.github.dfa1.rocksdbffm.FilterPolicy;
 import io.github.dfa1.rocksdbffm.LRUCache;
 import io.github.dfa1.rocksdbffm.MemorySize;
@@ -75,6 +76,9 @@ public class RocksDBFfmColumnarKeyValueStorage
   private static final long ROCKSDB_BLOCK_SIZE = 32768;
   private static final long ROCKSDB_BLOCKCACHE_SIZE_HIGH_SPEC = 1_073_741_824L;
   private static final long WAL_MAX_TOTAL_SIZE = 1_073_741_824L;
+  private static final long EXPECTED_WAL_FILE_SIZE = 67_108_864L; // 64 MiB
+  private static final long NUMBER_OF_LOG_FILES_TO_KEEP = 7L;
+  private static final long TIME_TO_ROLL_LOG_FILE = 86_400L; // 1 day in seconds
   // Must be >= write_buffer_size so OptimisticTransactionDB conflict detection
   // always has history back to any live transaction's start sequence number.
   private static final long WRITE_BUFFER_SIZE_TO_MAINTAIN = 67_108_864L; // 64 MiB
@@ -83,6 +87,7 @@ public class RocksDBFfmColumnarKeyValueStorage
   private final Map<SegmentIdentifier, ColumnFamilyHandle> cfHandles;
   private final ReadOptions defaultReadOptions;
   private final WriteOptions defaultWriteOptions;
+  private final WriteOptions tryDeleteWriteOptions;
   private final List<LRUCache> blockCaches = new ArrayList<>();
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -106,11 +111,20 @@ public class RocksDBFfmColumnarKeyValueStorage
             .setCreateIfMissing(true)
             .setCreateMissingColumnFamilies(true)
             .setMaxOpenFiles(rocksDBConfig.getMaxOpenFiles())
-            .setMaxTotalWalSize(WAL_MAX_TOTAL_SIZE)) {
+            .setMaxTotalWalSize(WAL_MAX_TOTAL_SIZE)
+            .setRecycleLogFileNum(WAL_MAX_TOTAL_SIZE / EXPECTED_WAL_FILE_SIZE)
+            .setLogFileTimeToRoll(TIME_TO_ROLL_LOG_FILE)
+            .setKeepLogFileNum(NUMBER_OF_LOG_FILES_TO_KEEP)
+            .setEnv(
+                Env.defaultEnv()
+                    .setBackgroundThreads(rocksDBConfig.getBackgroundThreadCount()))) {
       this.cfHandles = new HashMap<>();
       this.db = openWithSegments(opts, dbPath, segments, cfHandles, rocksDBConfig);
-      this.defaultReadOptions = ReadOptions.newReadOptions();
-      this.defaultWriteOptions = WriteOptions.newWriteOptions();
+      this.defaultReadOptions = ReadOptions.newReadOptions().setVerifyChecksums(false);
+      this.defaultWriteOptions =
+          WriteOptions.newWriteOptions().setIgnoreMissingColumnFamilies(true);
+      this.tryDeleteWriteOptions =
+          WriteOptions.newWriteOptions().setNoSlowdown(true).setIgnoreMissingColumnFamilies(true);
     } catch (final io.github.dfa1.rocksdbffm.RocksDBException e) {
       throw new StorageException(e);
     }
@@ -302,6 +316,16 @@ public class RocksDBFfmColumnarKeyValueStorage
   }
 
   @Override
+  public SegmentedKeyValueStorageTransaction startLowPriorityTransaction() throws StorageException {
+    throwIfClosed();
+    final WriteOptions lowPriOpts =
+        WriteOptions.newWriteOptions().setLowPri(true).setIgnoreMissingColumnFamilies(true);
+    return new SegmentedKeyValueStorageTransactionValidatorDecorator(
+        new RocksDBFfmTransaction(this::cfHandle, db.beginTransaction(lowPriOpts), lowPriOpts),
+        this.closed::get);
+  }
+
+  @Override
   public Stream<Pair<byte[], byte[]>> stream(final SegmentIdentifier segment) {
     throwIfClosed();
     final var iter = db.newIterator(cfHandle(segment), defaultReadOptions);
@@ -393,6 +417,7 @@ public class RocksDBFfmColumnarKeyValueStorage
     if (closed.compareAndSet(false, true)) {
       defaultReadOptions.close();
       defaultWriteOptions.close();
+      tryDeleteWriteOptions.close();
       for (final ColumnFamilyHandle handle : cfHandles.values()) {
         try {
           handle.close();
