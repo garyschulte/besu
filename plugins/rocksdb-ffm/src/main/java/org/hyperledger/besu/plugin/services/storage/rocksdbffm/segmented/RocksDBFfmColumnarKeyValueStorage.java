@@ -111,6 +111,7 @@ public class RocksDBFfmColumnarKeyValueStorage
             .setCreateIfMissing(true)
             .setCreateMissingColumnFamilies(true)
             .setMaxOpenFiles(rocksDBConfig.getMaxOpenFiles())
+            .setMaxBackgroundJobs(rocksDBConfig.getBackgroundThreadCount())
             .setMaxTotalWalSize(WAL_MAX_TOTAL_SIZE)
             .setRecycleLogFileNum(WAL_MAX_TOTAL_SIZE / EXPECTED_WAL_FILE_SIZE)
             .setLogFileTimeToRoll(TIME_TO_ROLL_LOG_FILE)
