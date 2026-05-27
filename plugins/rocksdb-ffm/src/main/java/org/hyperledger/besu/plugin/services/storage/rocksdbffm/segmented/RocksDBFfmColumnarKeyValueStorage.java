@@ -45,7 +45,6 @@ import io.github.dfa1.rocksdbffm.BlockBasedTableOptions;
 import io.github.dfa1.rocksdbffm.ColumnFamilyDescriptor;
 import io.github.dfa1.rocksdbffm.ColumnFamilyHandle;
 import io.github.dfa1.rocksdbffm.CompressionType;
-import io.github.dfa1.rocksdbffm.Env;
 import io.github.dfa1.rocksdbffm.FilterPolicy;
 import io.github.dfa1.rocksdbffm.LRUCache;
 import io.github.dfa1.rocksdbffm.MemorySize;
@@ -79,9 +78,6 @@ public class RocksDBFfmColumnarKeyValueStorage
   private static final long EXPECTED_WAL_FILE_SIZE = 67_108_864L; // 64 MiB
   private static final long NUMBER_OF_LOG_FILES_TO_KEEP = 7L;
   private static final long TIME_TO_ROLL_LOG_FILE = 86_400L; // 1 day in seconds
-  // Must be >= write_buffer_size so OptimisticTransactionDB conflict detection
-  // always has history back to any live transaction's start sequence number.
-  private static final long WRITE_BUFFER_SIZE_TO_MAINTAIN = 67_108_864L; // 64 MiB
 
   private final OptimisticTransactionDB db;
   private final Map<SegmentIdentifier, ColumnFamilyHandle> cfHandles;
@@ -115,9 +111,7 @@ public class RocksDBFfmColumnarKeyValueStorage
             .setMaxTotalWalSize(WAL_MAX_TOTAL_SIZE)
             .setRecycleLogFileNum(WAL_MAX_TOTAL_SIZE / EXPECTED_WAL_FILE_SIZE)
             .setLogFileTimeToRoll(TIME_TO_ROLL_LOG_FILE)
-            .setKeepLogFileNum(NUMBER_OF_LOG_FILES_TO_KEEP)
-            .setEnv(
-                Env.defaultEnv().setBackgroundThreads(rocksDBConfig.getBackgroundThreadCount()))) {
+            .setKeepLogFileNum(NUMBER_OF_LOG_FILES_TO_KEEP)) {
       this.cfHandles = new HashMap<>();
       this.db = openWithSegments(opts, dbPath, segments, cfHandles, rocksDBConfig);
       this.defaultReadOptions = ReadOptions.newReadOptions().setVerifyChecksums(false);
@@ -157,7 +151,6 @@ public class RocksDBFfmColumnarKeyValueStorage
     }
     cfOpts.setCompression(CompressionType.LZ4);
     cfOpts.setLevelCompactionDynamicLevelBytes(true);
-    cfOpts.setMaxWriteBufferSizeToMaintain(WRITE_BUFFER_SIZE_TO_MAINTAIN);
     if (segment.containsStaticData()) {
       configureBlobDBForSegment(segment, config, cfOpts);
     }
