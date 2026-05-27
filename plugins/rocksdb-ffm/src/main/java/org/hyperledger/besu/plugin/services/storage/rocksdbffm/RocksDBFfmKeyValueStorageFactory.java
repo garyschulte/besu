@@ -82,7 +82,10 @@ public class RocksDBFfmKeyValueStorageFactory implements KeyValueStorageFactory 
     if (segmentedStorage == null) {
       segmentedStorage =
           new RocksDBFfmColumnarKeyValueStorage(
-              commonConfiguration.getStoragePath(), configuredSegments, configuration.get());
+              commonConfiguration.getStoragePath(),
+              configuredSegments,
+              configuration.get(),
+              metricsSystem);
       LOG.info("Opened rocksdb-ffm storage at {}", commonConfiguration.getStoragePath());
     }
     return segmentedStorage;

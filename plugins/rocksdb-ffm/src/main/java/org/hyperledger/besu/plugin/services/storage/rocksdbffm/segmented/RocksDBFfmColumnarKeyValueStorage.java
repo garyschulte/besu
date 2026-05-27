@@ -16,14 +16,19 @@ package org.hyperledger.besu.plugin.services.storage.rocksdbffm.segmented;
 
 import static java.util.stream.Collectors.toUnmodifiableSet;
 import static org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIdentifier.BLOCKCHAIN;
+import static org.hyperledger.besu.metrics.BesuMetricCategory.KVSTORE_ROCKSDB;
+import static org.hyperledger.besu.metrics.BesuMetricCategory.KVSTORE_ROCKSDB_STATS;
 
+import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.exception.StorageException;
 import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier;
 import org.hyperledger.besu.plugin.services.storage.SegmentedKeyValueStorage;
 import org.hyperledger.besu.plugin.services.storage.SegmentedKeyValueStorageTransaction;
 import org.hyperledger.besu.plugin.services.storage.SnappableKeyValueStorage;
 import org.hyperledger.besu.plugin.services.storage.SnappedKeyValueStorage;
+import org.hyperledger.besu.plugin.services.storage.rocksdb.RocksDBMetrics;
 import org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.RocksDBFactoryConfiguration;
+import org.hyperledger.besu.plugin.services.storage.rocksdbffm.RocksDBFfmStats;
 import org.hyperledger.besu.services.kvstore.SegmentedKeyValueStorageTransactionValidatorDecorator;
 
 import java.io.IOException;
@@ -50,8 +55,10 @@ import io.github.dfa1.rocksdbffm.LRUCache;
 import io.github.dfa1.rocksdbffm.MemorySize;
 import io.github.dfa1.rocksdbffm.OptimisticTransactionDB;
 import io.github.dfa1.rocksdbffm.Options;
+import io.github.dfa1.rocksdbffm.Property;
 import io.github.dfa1.rocksdbffm.ReadOptions;
 import io.github.dfa1.rocksdbffm.RocksDB;
+import io.github.dfa1.rocksdbffm.StatsLevel;
 import io.github.dfa1.rocksdbffm.WriteOptions;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.tuweni.bytes.Bytes;
@@ -86,6 +93,9 @@ public class RocksDBFfmColumnarKeyValueStorage
   private final WriteOptions tryDeleteWriteOptions;
   private final List<LRUCache> blockCaches = new ArrayList<>();
   private final AtomicBoolean closed = new AtomicBoolean(false);
+  // Kept alive so statistics can be polled after open; closed after the DB is closed.
+  private final Options statsOptions;
+  private final RocksDBMetrics metrics;
 
   /**
    * Opens (or creates) the database at the given path, ensuring a column family exists for every
@@ -95,14 +105,17 @@ public class RocksDBFfmColumnarKeyValueStorage
    * @param dbPath path to the RocksDB directory
    * @param segments segment identifiers to expose; must include the DEFAULT segment
    * @param rocksDBConfig RocksDB tuning parameters (cache capacity, max open files, etc.)
+   * @param metricsSystem Besu metrics system for operation timers and RocksDB statistics
    * @throws StorageException if the database cannot be opened
    */
   public RocksDBFfmColumnarKeyValueStorage(
       final Path dbPath,
       final List<SegmentIdentifier> segments,
-      final RocksDBFactoryConfiguration rocksDBConfig)
+      final RocksDBFactoryConfiguration rocksDBConfig,
+      final MetricsSystem metricsSystem)
       throws StorageException {
-    try (Options opts =
+    // Options must remain open after DB is opened so statistics can be polled via getTickerCount.
+    final Options opts =
         Options.newOptions()
             .setCreateIfMissing(true)
             .setCreateMissingColumnFamilies(true)
@@ -111,7 +124,11 @@ public class RocksDBFfmColumnarKeyValueStorage
             .setMaxTotalWalSize(WAL_MAX_TOTAL_SIZE)
             .setRecycleLogFileNum(WAL_MAX_TOTAL_SIZE / EXPECTED_WAL_FILE_SIZE)
             .setLogFileTimeToRoll(TIME_TO_ROLL_LOG_FILE)
-            .setKeepLogFileNum(NUMBER_OF_LOG_FILES_TO_KEEP)) {
+            .setKeepLogFileNum(NUMBER_OF_LOG_FILES_TO_KEEP)
+            .enableStatistics()
+            .setStatisticsLevel(StatsLevel.EXCEPT_DETAILED_TIMERS);
+    this.statsOptions = opts;
+    try {
       this.cfHandles = new HashMap<>();
       this.db = openWithSegments(opts, dbPath, segments, cfHandles, rocksDBConfig);
       this.defaultReadOptions = ReadOptions.newReadOptions().setVerifyChecksums(false);
@@ -120,8 +137,70 @@ public class RocksDBFfmColumnarKeyValueStorage
       this.tryDeleteWriteOptions =
           WriteOptions.newWriteOptions().setNoSlowdown(true).setIgnoreMissingColumnFamilies(true);
     } catch (final io.github.dfa1.rocksdbffm.RocksDBException e) {
+      opts.close();
       throw new StorageException(e);
     }
+    this.metrics = createMetrics(metricsSystem);
+  }
+
+  private RocksDBMetrics createMetrics(final MetricsSystem metricsSystem) {
+    final var readLatency =
+        metricsSystem
+            .createLabelledTimer(
+                KVSTORE_ROCKSDB, "read_latency_seconds", "Latency for read from RocksDB.",
+                "database")
+            .labels("blockchain");
+    final var removeLatency =
+        metricsSystem
+            .createLabelledTimer(
+                KVSTORE_ROCKSDB,
+                "remove_latency_seconds",
+                "Latency of remove requests from RocksDB.",
+                "database")
+            .labels("blockchain");
+    final var writeLatency =
+        metricsSystem
+            .createLabelledTimer(
+                KVSTORE_ROCKSDB, "write_latency_seconds", "Latency for write to RocksDB.",
+                "database")
+            .labels("blockchain");
+    final var commitLatency =
+        metricsSystem
+            .createLabelledTimer(
+                KVSTORE_ROCKSDB, "commit_latency_seconds", "Latency for commits to RocksDB.",
+                "database")
+            .labels("blockchain");
+    final var rollbackCount =
+        metricsSystem
+            .createLabelledCounter(
+                KVSTORE_ROCKSDB,
+                "rollback_count",
+                "Number of RocksDB transactions rolled back.",
+                "database")
+            .labels("blockchain");
+
+    RocksDBFfmStats.registerRocksDBMetrics(statsOptions, metricsSystem, KVSTORE_ROCKSDB_STATS);
+
+    metricsSystem.createLongGauge(
+        KVSTORE_ROCKSDB,
+        "rocks_db_table_readers_memory_bytes",
+        "Estimated memory used for RocksDB index and filter blocks in bytes",
+        () ->
+            db.getLongProperty(Property.ESTIMATE_TABLE_READERS_MEM)
+                .orElse(0L));
+
+    metricsSystem.createLongGauge(
+        KVSTORE_ROCKSDB,
+        "rocks_db_files_size_bytes",
+        "Estimated database size in bytes",
+        () -> db.getLongProperty(Property.LIVE_SST_FILES_SIZE).orElse(0L));
+
+    return new RocksDBMetrics(readLatency, removeLatency, writeLatency, commitLatency, rollbackCount);
+  }
+
+  /** Returns the metrics container for use by transactions. */
+  RocksDBMetrics getMetrics() {
+    return metrics;
   }
 
   private BlockBasedTableOptions createTableOptions(
@@ -285,8 +364,10 @@ public class RocksDBFfmColumnarKeyValueStorage
   public Optional<byte[]> get(final SegmentIdentifier segment, final byte[] key)
       throws StorageException {
     throwIfClosed();
-    final byte[] result = db.get(cfHandle(segment), defaultReadOptions, key);
-    return Optional.ofNullable(result);
+    try (var ignored = metrics.getReadLatency().startTimer()) {
+      final byte[] result = db.get(cfHandle(segment), defaultReadOptions, key);
+      return Optional.ofNullable(result);
+    }
   }
 
   @Override
@@ -327,7 +408,7 @@ public class RocksDBFfmColumnarKeyValueStorage
   public SegmentedKeyValueStorageTransaction startTransaction() throws StorageException {
     throwIfClosed();
     return new SegmentedKeyValueStorageTransactionValidatorDecorator(
-        new RocksDBFfmTransaction(this::cfHandle, db.beginTransaction(defaultWriteOptions)),
+        new RocksDBFfmTransaction(this::cfHandle, db.beginTransaction(defaultWriteOptions), metrics),
         this.closed::get);
   }
 
@@ -337,7 +418,8 @@ public class RocksDBFfmColumnarKeyValueStorage
     final WriteOptions lowPriOpts =
         WriteOptions.newWriteOptions().setLowPri(true).setIgnoreMissingColumnFamilies(true);
     return new SegmentedKeyValueStorageTransactionValidatorDecorator(
-        new RocksDBFfmTransaction(this::cfHandle, db.beginTransaction(lowPriOpts), lowPriOpts),
+        new RocksDBFfmTransaction(
+            this::cfHandle, db.beginTransaction(lowPriOpts), lowPriOpts, metrics),
         this.closed::get);
   }
 
@@ -443,6 +525,8 @@ public class RocksDBFfmColumnarKeyValueStorage
       }
       db.close();
       blockCaches.forEach(LRUCache::close);
+      // Close after DB so in-flight statistics polls complete before the opts ptr is freed.
+      statsOptions.close();
     }
   }
 
