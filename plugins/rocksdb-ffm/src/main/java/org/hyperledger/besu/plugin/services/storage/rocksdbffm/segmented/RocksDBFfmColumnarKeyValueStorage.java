@@ -23,13 +23,14 @@ import org.hyperledger.besu.plugin.services.storage.SegmentedKeyValueStorage;
 import org.hyperledger.besu.plugin.services.storage.SegmentedKeyValueStorageTransaction;
 import org.hyperledger.besu.plugin.services.storage.SnappableKeyValueStorage;
 import org.hyperledger.besu.plugin.services.storage.SnappedKeyValueStorage;
+import org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.RocksDBFactoryConfiguration;
+import org.hyperledger.besu.services.kvstore.SegmentedKeyValueStorageTransactionValidatorDecorator;
 
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,16 +56,14 @@ import io.github.dfa1.rocksdbffm.RocksDB;
 import io.github.dfa1.rocksdbffm.WriteOptions;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.tuweni.bytes.Bytes;
-import org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.RocksDBFactoryConfiguration;
-import org.hyperledger.besu.services.kvstore.SegmentedKeyValueStorageTransactionValidatorDecorator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * rocksdbffm-backed implementation of {@link SegmentedKeyValueStorage}. Uses
- * {@link OptimisticTransactionDB} with one column family per {@link SegmentIdentifier}. The
- * {@link #getWithReader} override calls rocksdbffm's {@code withPinnedValue} to avoid materialising
- * the value as a heap {@code byte[]}.
+ * rocksdbffm-backed implementation of {@link SegmentedKeyValueStorage}. Uses {@link
+ * OptimisticTransactionDB} with one column family per {@link SegmentIdentifier}. The {@link
+ * #getWithReader} override calls rocksdbffm's {@code withPinnedValue} to avoid materialising the
+ * value as a heap {@code byte[]}.
  */
 public class RocksDBFfmColumnarKeyValueStorage
     implements SegmentedKeyValueStorage, SnappableKeyValueStorage {
@@ -118,8 +117,7 @@ public class RocksDBFfmColumnarKeyValueStorage
             .setLogFileTimeToRoll(TIME_TO_ROLL_LOG_FILE)
             .setKeepLogFileNum(NUMBER_OF_LOG_FILES_TO_KEEP)
             .setEnv(
-                Env.defaultEnv()
-                    .setBackgroundThreads(rocksDBConfig.getBackgroundThreadCount()))) {
+                Env.defaultEnv().setBackgroundThreads(rocksDBConfig.getBackgroundThreadCount()))) {
       this.cfHandles = new HashMap<>();
       this.db = openWithSegments(opts, dbPath, segments, cfHandles, rocksDBConfig);
       this.defaultReadOptions = ReadOptions.newReadOptions().setVerifyChecksums(false);
@@ -140,7 +138,8 @@ public class RocksDBFfmColumnarKeyValueStorage
             : config.getCacheCapacity();
     final LRUCache cache = LRUCache.newLRUCache(MemorySize.ofBytes(cacheSize));
     blockCaches.add(cache);
-    // FilterPolicy ownership transfers to BlockBasedTableOptions on setFilterPolicy; do not close it.
+    // FilterPolicy ownership transfers to BlockBasedTableOptions on setFilterPolicy; do not close
+    // it.
     return BlockBasedTableOptions.newBlockBasedConfig()
         .setFormatVersion(ROCKSDB_FORMAT_VERSION)
         .setBlockCache(cache)
@@ -188,8 +187,8 @@ public class RocksDBFfmColumnarKeyValueStorage
 
   /**
    * Opens the DB with all existing column families, then creates any that are missing from the
-   * requested segments list. Per-segment {@link BlockBasedTableOptions} (with a bounded
-   * {@link LRUCache}) are applied to each column family descriptor before open.
+   * requested segments list. Per-segment {@link BlockBasedTableOptions} (with a bounded {@link
+   * LRUCache}) are applied to each column family descriptor before open.
    */
   private OptimisticTransactionDB openWithSegments(
       final Options opts,
@@ -299,9 +298,7 @@ public class RocksDBFfmColumnarKeyValueStorage
 
   @Override
   public <T> Optional<T> getWithReader(
-      final SegmentIdentifier segment,
-      final byte[] key,
-      final Function<MemorySegment, T> reader)
+      final SegmentIdentifier segment, final byte[] key, final Function<MemorySegment, T> reader)
       throws StorageException {
     throwIfClosed();
     return db.withPinnedValue(cfHandle(segment), defaultReadOptions, key, reader);
@@ -321,8 +318,8 @@ public class RocksDBFfmColumnarKeyValueStorage
   }
 
   @Override
-  public Optional<NearestKeyValue> getNearestAfter(
-      final SegmentIdentifier segment, final Bytes key) throws StorageException {
+  public Optional<NearestKeyValue> getNearestAfter(final SegmentIdentifier segment, final Bytes key)
+      throws StorageException {
     throwIfClosed();
     try (var iter = db.newIterator(cfHandle(segment), defaultReadOptions)) {
       iter.seek(key.toArrayUnsafe());

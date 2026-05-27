@@ -16,8 +16,6 @@ package org.hyperledger.besu.plugin.services.storage.rocksdbffm.segmented;
 
 import static com.google.common.base.Preconditions.checkState;
 
-import io.github.dfa1.rocksdbffm.RocksIterator;
-
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Spliterator;
@@ -26,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import io.github.dfa1.rocksdbffm.RocksIterator;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

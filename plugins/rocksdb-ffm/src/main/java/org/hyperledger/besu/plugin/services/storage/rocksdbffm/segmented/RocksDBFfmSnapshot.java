@@ -41,8 +41,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A point-in-time snapshot view of a {@link RocksDBFfmColumnarKeyValueStorage}. Reads are served
- * at the snapshot sequence number; writes are discarded (no-op transaction).
+ * A point-in-time snapshot view of a {@link RocksDBFfmColumnarKeyValueStorage}. Reads are served at
+ * the snapshot sequence number; writes are discarded (no-op transaction).
  */
 public class RocksDBFfmSnapshot implements SegmentedKeyValueStorage, SnappedKeyValueStorage {
 
@@ -79,9 +79,7 @@ public class RocksDBFfmSnapshot implements SegmentedKeyValueStorage, SnappedKeyV
 
   @Override
   public <T> Optional<T> getWithReader(
-      final SegmentIdentifier segment,
-      final byte[] key,
-      final Function<MemorySegment, T> reader)
+      final SegmentIdentifier segment, final byte[] key, final Function<MemorySegment, T> reader)
       throws StorageException {
     throwIfClosed();
     return db.withPinnedValue(cfMapper.apply(segment), readOptions, key, reader);
@@ -101,8 +99,8 @@ public class RocksDBFfmSnapshot implements SegmentedKeyValueStorage, SnappedKeyV
   }
 
   @Override
-  public Optional<NearestKeyValue> getNearestAfter(
-      final SegmentIdentifier segment, final Bytes key) throws StorageException {
+  public Optional<NearestKeyValue> getNearestAfter(final SegmentIdentifier segment, final Bytes key)
+      throws StorageException {
     throwIfClosed();
     try (var iter = db.newIterator(cfMapper.apply(segment), readOptions)) {
       iter.seek(key.toArrayUnsafe());

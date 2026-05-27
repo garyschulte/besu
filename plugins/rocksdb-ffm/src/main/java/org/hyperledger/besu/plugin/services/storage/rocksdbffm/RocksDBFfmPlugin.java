@@ -26,11 +26,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Besu plugin that registers the rocksdbffm-backed storage factory under the name
- * {@value RocksDBFfmKeyValueStorageFactory#NAME}. Activate with
- * {@code --key-value-storage=rocksdb-ffm}.
+ * Besu plugin that registers the rocksdbffm-backed storage factory under the name {@value
+ * RocksDBFfmKeyValueStorageFactory#NAME}. Activate with {@code --key-value-storage=rocksdb-ffm}.
  */
 public class RocksDBFfmPlugin implements BesuPlugin {
+
+  /** Creates a new RocksDBFfmPlugin. */
+  public RocksDBFfmPlugin() {}
 
   private static final Logger LOG = LoggerFactory.getLogger(RocksDBFfmPlugin.class);
 

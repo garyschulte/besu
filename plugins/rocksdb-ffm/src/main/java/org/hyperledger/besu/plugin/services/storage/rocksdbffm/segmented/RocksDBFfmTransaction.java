@@ -24,7 +24,9 @@ import io.github.dfa1.rocksdbffm.ColumnFamilyHandle;
 import io.github.dfa1.rocksdbffm.Transaction;
 import io.github.dfa1.rocksdbffm.WriteOptions;
 
-/** Adapts a rocksdbffm {@link Transaction} to Besu's {@link SegmentedKeyValueStorageTransaction}. */
+/**
+ * Adapts a rocksdbffm {@link Transaction} to Besu's {@link SegmentedKeyValueStorageTransaction}.
+ */
 public class RocksDBFfmTransaction implements SegmentedKeyValueStorageTransaction {
 
   private final Function<SegmentIdentifier, ColumnFamilyHandle> cfMapper;
@@ -60,8 +62,7 @@ public class RocksDBFfmTransaction implements SegmentedKeyValueStorageTransactio
   }
 
   @Override
-  public void put(
-      final SegmentIdentifier segmentIdentifier, final byte[] key, final byte[] value) {
+  public void put(final SegmentIdentifier segmentIdentifier, final byte[] key, final byte[] value) {
     txn.put(cfMapper.apply(segmentIdentifier), key, value);
   }
 

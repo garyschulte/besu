@@ -33,8 +33,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Factory for the rocksdbffm-backed storage plugin. Creates a single
- * {@link RocksDBFfmColumnarKeyValueStorage} per data directory.
+ * Factory for the rocksdbffm-backed storage plugin. Creates a single {@link
+ * RocksDBFfmColumnarKeyValueStorage} per data directory.
  */
 public class RocksDBFfmKeyValueStorageFactory implements KeyValueStorageFactory {
 
