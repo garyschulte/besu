@@ -50,6 +50,7 @@ import io.github.dfa1.rocksdbffm.BlockBasedTableOptions;
 import io.github.dfa1.rocksdbffm.ColumnFamilyDescriptor;
 import io.github.dfa1.rocksdbffm.ColumnFamilyHandle;
 import io.github.dfa1.rocksdbffm.CompressionType;
+import io.github.dfa1.rocksdbffm.Env;
 import io.github.dfa1.rocksdbffm.FilterPolicy;
 import io.github.dfa1.rocksdbffm.LRUCache;
 import io.github.dfa1.rocksdbffm.MemorySize;
@@ -115,18 +116,23 @@ public class RocksDBFfmColumnarKeyValueStorage
       final MetricsSystem metricsSystem)
       throws StorageException {
     // Options must remain open after DB is opened so statistics can be polled via getTickerCount.
-    final Options opts =
-        Options.newOptions()
-            .setCreateIfMissing(true)
-            .setCreateMissingColumnFamilies(true)
-            .setMaxOpenFiles(rocksDBConfig.getMaxOpenFiles())
-            .setMaxBackgroundJobs(rocksDBConfig.getBackgroundThreadCount())
-            .setMaxTotalWalSize(WAL_MAX_TOTAL_SIZE)
-            .setRecycleLogFileNum(WAL_MAX_TOTAL_SIZE / EXPECTED_WAL_FILE_SIZE)
-            .setLogFileTimeToRoll(TIME_TO_ROLL_LOG_FILE)
-            .setKeepLogFileNum(NUMBER_OF_LOG_FILES_TO_KEEP)
-            .enableStatistics()
-            .setStatisticsLevel(StatsLevel.EXCEPT_DETAILED_TIMERS);
+    // Mirror the JNI plugin's thread model: size the low-priority Env thread pool but do NOT call
+    // setMaxBackgroundJobs(), which would override RocksDB's default of 2 (1 flush + 1 compaction).
+    // Setting max_background_jobs=N without a matching thread pool causes N−1 compaction threads to
+    // compete for I/O and CPU, degrading SST read latency and write throughput under load.
+    final Options opts = Options.newOptions();
+    try (var env = Env.defaultEnv().setBackgroundThreads(rocksDBConfig.getBackgroundThreadCount())) {
+      opts.setEnv(env);
+    }
+    opts.setCreateIfMissing(true)
+        .setCreateMissingColumnFamilies(true)
+        .setMaxOpenFiles(rocksDBConfig.getMaxOpenFiles())
+        .setMaxTotalWalSize(WAL_MAX_TOTAL_SIZE)
+        .setRecycleLogFileNum(WAL_MAX_TOTAL_SIZE / EXPECTED_WAL_FILE_SIZE)
+        .setLogFileTimeToRoll(TIME_TO_ROLL_LOG_FILE)
+        .setKeepLogFileNum(NUMBER_OF_LOG_FILES_TO_KEEP)
+        .enableStatistics()
+        .setStatisticsLevel(StatsLevel.EXCEPT_DETAILED_TIMERS);
     this.statsOptions = opts;
     try {
       this.cfHandles = new HashMap<>();
