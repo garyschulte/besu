@@ -137,7 +137,7 @@ public class RocksDBFfmColumnarKeyValueStorage
     return BlockBasedTableOptions.newBlockBasedConfig()
         .setFormatVersion(ROCKSDB_FORMAT_VERSION)
         .setBlockCache(cache)
-        .setFilterPolicy(FilterPolicy.newBloom(10))
+        .setFilterPolicy(FilterPolicy.newBloomFull(10))
         .setPartitionFilters(true)
         .setCacheIndexAndFilterBlocks(segment.isCacheIndexAndFilterBlocks())
         .setBlockSize(MemorySize.ofBytes(ROCKSDB_BLOCK_SIZE));

@@ -73,7 +73,7 @@ public class RocksDBCLIOptions {
       defaultValue = "1024",
       paramLabel = "<INTEGER>",
       description = "Max number of files RocksDB will open (default: ${DEFAULT-VALUE})")
-  int maxOpenFiles;
+  int maxOpenFiles = 1024;
 
   /** The Cache capacity. */
   @CommandLine.Option(
@@ -82,7 +82,7 @@ public class RocksDBCLIOptions {
       defaultValue = "134217728",
       paramLabel = "<LONG>",
       description = "Cache capacity of RocksDB (default: ${DEFAULT-VALUE})")
-  long cacheCapacity;
+  long cacheCapacity = DEFAULT_CACHE_CAPACITY;
 
   /** The Background thread count. */
   @CommandLine.Option(
@@ -91,7 +91,7 @@ public class RocksDBCLIOptions {
       defaultValue = "4",
       paramLabel = "<INTEGER>",
       description = "Number of RocksDB background threads (default: ${DEFAULT-VALUE})")
-  int backgroundThreadCount;
+  int backgroundThreadCount = 4;
 
   /** The Is high spec. */
   @CommandLine.Option(
