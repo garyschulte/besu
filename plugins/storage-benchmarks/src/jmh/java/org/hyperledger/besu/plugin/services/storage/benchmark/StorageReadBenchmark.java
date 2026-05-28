@@ -20,6 +20,7 @@ import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier;
 import org.hyperledger.besu.plugin.services.storage.SegmentedKeyValueStorage;
 import org.hyperledger.besu.plugin.services.storage.rocksdb.RocksDBMetricsFactory;
 import org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.RocksDBConfigurationBuilder;
+import org.hyperledger.besu.plugin.services.storage.rocksdb.configuration.RocksDBFactoryConfiguration;
 import org.hyperledger.besu.plugin.services.storage.rocksdb.segmented.OptimisticRocksDBColumnarKeyValueStorage;
 import org.hyperledger.besu.plugin.services.storage.rocksdbffm.segmented.RocksDBFfmColumnarKeyValueStorage;
 
@@ -116,8 +117,19 @@ public class StorageReadBenchmark {
 					List.of(),
 					new NoOpMetricsSystem(),
 					RocksDBMetricsFactory.PUBLIC_ROCKS_DB_METRICS);
-			case "rocksdb-ffm" ->
-					new RocksDBFfmColumnarKeyValueStorage(dir, List.of(DEFAULT_SEGMENT, SEGMENT));
+			case "rocksdb-ffm" -> new RocksDBFfmColumnarKeyValueStorage(
+					dir,
+					List.of(DEFAULT_SEGMENT, SEGMENT),
+					new RocksDBFactoryConfiguration(
+							1024,
+							4,
+							256L * 1024 * 1024,
+							false,
+							false,
+							false,
+							Optional.empty(),
+							Optional.empty()),
+					new NoOpMetricsSystem());
 			default -> throw new IllegalArgumentException("Unknown plugin: " + pluginName);
 		};
 	}
