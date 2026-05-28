@@ -381,6 +381,21 @@ public class RocksDBFfmColumnarKeyValueStorage
     }
   }
 
+  /**
+   * Returns the value as a {@link Bytes} view backed directly by the RocksDB block-cache pin. For
+   * 32-byte storage slot values the returned object is a {@link PinnedBytes32}, which implements
+   * {@link org.apache.tuweni.bytes.Bytes32} so that {@code UInt256::fromBytes} takes the {@code
+   * int[8]}-backed fast path (via {@code instanceof Bytes32}) rather than allocating an
+   * intermediate heap array through {@code Bytes32.leftPad}.
+   */
+  @Override
+  public Optional<Bytes> getAsBytes(final SegmentIdentifier segment, final byte[] key)
+      throws StorageException {
+    throwIfClosed();
+    return db.getPinned(cfHandle(segment), defaultReadOptions, key)
+        .map(PinnedBytes32::new);
+  }
+
   @Override
   public <T> Optional<T> getWithReader(
       final SegmentIdentifier segment, final byte[] key, final Function<MemorySegment, T> reader)

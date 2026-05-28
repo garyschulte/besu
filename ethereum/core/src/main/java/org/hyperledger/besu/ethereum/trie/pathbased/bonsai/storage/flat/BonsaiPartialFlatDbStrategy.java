@@ -121,12 +121,10 @@ public class BonsaiPartialFlatDbStrategy extends BonsaiFlatDbStrategy {
       final SegmentedKeyValueStorage storage) {
     getStorageValueCounter.inc();
     Optional<Bytes> response =
-        storage
-            .get(
-                ACCOUNT_STORAGE_STORAGE,
-                Bytes.concatenate(accountHash.getBytes(), storageSlotKey.getSlotHash().getBytes())
-                    .toArrayUnsafe())
-            .map(Bytes::wrap);
+        storage.getAsBytes(
+            ACCOUNT_STORAGE_STORAGE,
+            Bytes.concatenate(accountHash.getBytes(), storageSlotKey.getSlotHash().getBytes())
+                .toArrayUnsafe());
     if (response.isEmpty()) {
       final Optional<Hash> storageRoot = storageRootSupplier.get();
       final Optional<Bytes> worldStateRootHash = worldStateRootHashSupplier.get();

@@ -41,6 +41,22 @@ public interface SegmentedKeyValueStorage extends Closeable {
   Optional<byte[]> get(SegmentIdentifier segment, byte[] key) throws StorageException;
 
   /**
+   * Get the value from the associated segment and key as a {@link Bytes} view. Implementations may
+   * return a subtype (e.g. {@link org.apache.tuweni.bytes.Bytes32}) to allow callers such as {@code
+   * UInt256::fromBytes} to take optimised fast paths. The default implementation wraps the raw
+   * {@code byte[]} from {@link #get} with no additional copy.
+   *
+   * @param segment the segment
+   * @param key Index into persistent data repository.
+   * @return The value persisted at the key index, wrapped as {@link Bytes}.
+   * @throws StorageException the storage exception
+   */
+  default Optional<Bytes> getAsBytes(final SegmentIdentifier segment, final byte[] key)
+      throws StorageException {
+    return get(segment, key).map(Bytes::wrap);
+  }
+
+  /**
    * Finds the key and corresponding value that is "nearest before" the specified key. "Nearest
    * before" is defined as the closest key that is either exactly matching the supplied key or
    * lexicographically before it.
