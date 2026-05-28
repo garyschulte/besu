@@ -86,6 +86,10 @@ public class RocksDBFfmColumnarKeyValueStorage
   private static final long EXPECTED_WAL_FILE_SIZE = 67_108_864L; // 64 MiB
   private static final long NUMBER_OF_LOG_FILES_TO_KEEP = 7L;
   private static final long TIME_TO_ROLL_LOG_FILE = 86_400L; // 1 day in seconds
+  // 2 × the default write_buffer_size (64 MiB). The C API does not auto-set this for
+  // OptimisticTransactionDB (unlike the C++ API), so without an explicit value the conflict
+  // detector loses history the moment the WAL cap triggers a force-flush of the oldest CF.
+  private static final long ROCKSDB_MAX_WRITE_BUFFER_SIZE_TO_MAINTAIN = 128 * 1024 * 1024L;
 
   private final OptimisticTransactionDB db;
   private final Map<SegmentIdentifier, ColumnFamilyHandle> cfHandles;
@@ -131,6 +135,7 @@ public class RocksDBFfmColumnarKeyValueStorage
         .setRecycleLogFileNum(WAL_MAX_TOTAL_SIZE / EXPECTED_WAL_FILE_SIZE)
         .setLogFileTimeToRoll(TIME_TO_ROLL_LOG_FILE)
         .setKeepLogFileNum(NUMBER_OF_LOG_FILES_TO_KEEP)
+        .setMaxWriteBufferSizeToMaintain(ROCKSDB_MAX_WRITE_BUFFER_SIZE_TO_MAINTAIN)
         .enableStatistics()
         .setStatisticsLevel(StatsLevel.EXCEPT_DETAILED_TIMERS);
     this.statsOptions = opts;
