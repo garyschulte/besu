@@ -20,6 +20,7 @@ dependencies {
   jmhImplementation project(':services:kvstore')
   jmhImplementation project(':ethereum:core')
   jmhImplementation project(':metrics:core')
+  jmhImplementation project(':crypto:algorithms')
   jmhImplementation 'io.consensys.tuweni:tuweni-bytes'
   jmhImplementation 'org.slf4j:slf4j-api'
 }
