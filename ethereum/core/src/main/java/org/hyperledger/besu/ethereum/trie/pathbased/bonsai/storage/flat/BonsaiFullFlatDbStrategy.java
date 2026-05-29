@@ -30,6 +30,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 
 public class BonsaiFullFlatDbStrategy extends BonsaiFlatDbStrategy {
 
@@ -81,10 +82,12 @@ public class BonsaiFullFlatDbStrategy extends BonsaiFlatDbStrategy {
       final SegmentedKeyValueStorage storage) {
     getStorageValueCounter.inc();
     final Optional<Bytes> storageFound =
-        storage.getAsBytes(
-            ACCOUNT_STORAGE_STORAGE,
-            Bytes.concatenate(accountHash.getBytes(), storageSlotKey.getSlotHash().getBytes())
-                .toArrayUnsafe());
+        storage
+            .get(
+                ACCOUNT_STORAGE_STORAGE,
+                Bytes.concatenate(accountHash.getBytes(), storageSlotKey.getSlotHash().getBytes())
+                    .toArrayUnsafe())
+            .map(b -> b.length == 32 ? Bytes32.wrap(b) : Bytes.wrap(b));
     if (storageFound.isPresent()) {
       getStorageValueFlatDatabaseCounter.inc();
     } else {

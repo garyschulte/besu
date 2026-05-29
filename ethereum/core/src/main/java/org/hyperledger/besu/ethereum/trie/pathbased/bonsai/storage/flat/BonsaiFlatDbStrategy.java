@@ -41,7 +41,7 @@ import org.apache.tuweni.bytes.Bytes32;
  * from flat databases. It implements various methods for storing and retrieving account data, code
  * data, and storage data from the corresponding KeyValueStorage.
  */
-public abstract class BonsaiFlatDbStrategy extends FlatDbStrategy {
+public abstract class   BonsaiFlatDbStrategy extends FlatDbStrategy {
 
   public BonsaiFlatDbStrategy(
       final MetricsSystem metricsSystem, final CodeStorageStrategy codeStorageStrategy) {
