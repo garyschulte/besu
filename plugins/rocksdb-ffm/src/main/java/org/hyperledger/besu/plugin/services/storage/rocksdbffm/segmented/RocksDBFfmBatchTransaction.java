@@ -17,6 +17,8 @@ import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier;
 import org.hyperledger.besu.plugin.services.storage.SegmentedKeyValueStorageTransaction;
 import org.hyperledger.besu.plugin.services.storage.rocksdb.RocksDBMetrics;
 
+import java.lang.foreign.Arena;
+import java.lang.foreign.ValueLayout;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -93,12 +95,15 @@ public class RocksDBFfmBatchTransaction implements SegmentedKeyValueStorageTrans
   @Override
   public void commit() throws StorageException {
     try (var ignored = metrics.getCommitLatency().startTimer();
+        Arena arena = Arena.ofConfined();
         WriteBatch batch = WriteBatch.create()) {
       for (int i = 0; i < types.size(); i++) {
+        final var cf = cfs.get(i);
+        final var k = arena.allocateFrom(ValueLayout.JAVA_BYTE, keys.get(i));
         if (types.get(i) == PUT) {
-          batch.put(cfs.get(i), keys.get(i), values.get(i));
+          batch.put(cf, k, arena.allocateFrom(ValueLayout.JAVA_BYTE, values.get(i)));
         } else {
-          batch.delete(cfs.get(i), keys.get(i));
+          batch.delete(cf, k);
         }
       }
       try {
