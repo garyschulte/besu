@@ -36,6 +36,9 @@ dependencies {
   testImplementation project(':metrics:core')
   testImplementation project(':testutil')
 
+  testImplementation project(':ethereum:rlp')
+  testImplementation 'io.consensys.tuweni:tuweni-ssz:2.7.2'
+
   testImplementation 'com.fasterxml.jackson.core:jackson-databind'
   testImplementation 'org.assertj:assertj-core'
   testImplementation 'org.awaitility:awaitility'

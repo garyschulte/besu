@@ -46,8 +46,6 @@ import java.util.function.Function;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Builds the EIP-8025 execution witness (state trie nodes, contract codes, and ancestor headers)
@@ -55,8 +53,6 @@ import org.slf4j.LoggerFactory;
  * debug_executionWitness} and reference-test tooling so that both paths emit identical output.
  */
 public class BonsaiExecutionWitnessBuilder {
-
-  private static final Logger LOG = LoggerFactory.getLogger(BonsaiExecutionWitnessBuilder.class);
 
   public record Witness(List<String> state, List<String> codes, List<String> headers) {}
 
