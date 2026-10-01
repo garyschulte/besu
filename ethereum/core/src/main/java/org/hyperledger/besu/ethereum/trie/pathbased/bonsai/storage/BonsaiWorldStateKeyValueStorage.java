@@ -103,6 +103,7 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
   protected final SegmentedKeyValueStorage trieLogAndPreimageStorage;
 
   private final WorldStatePreimageStorage preimageStorage;
+  private final PreimageWriteMetrics preimageWriteMetrics;
 
   protected final BonsaiFlatDbStrategyProvider flatDbStrategyProvider;
   protected final FlatDbCacheManager cacheManager;
@@ -144,6 +145,10 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
           provider.getStorageBySegmentIdentifier(KeyValueSegmentIdentifier.TRIE_LOG_STORAGE);
     }
     this.preimageStorage = createPreimageStorage(trieLogAndPreimageStorage);
+    this.preimageWriteMetrics =
+        trieLogAndPreimageStorage == null
+            ? PreimageWriteMetrics.NO_OP
+            : new PreimageWriteMetrics(metricsSystem);
     this.flatDbStrategyProvider =
         new BonsaiFlatDbStrategyProvider(metricsSystem, dataStorageConfiguration);
     flatDbStrategyProvider.loadFlatDbStrategy(composedWorldStateStorage);
@@ -194,6 +199,27 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
       final long cacheVersion,
       final TrieNodeStrategy trieNodeStrategy,
       final SegmentedKeyValueStorage trieLogAndPreimageStorage) {
+    this(
+        flatDbStrategyProvider,
+        composedWorldStateStorage,
+        trieLogStorage,
+        cacheManager,
+        cacheVersion,
+        trieNodeStrategy,
+        trieLogAndPreimageStorage,
+        PreimageWriteMetrics.NO_OP);
+  }
+
+  public BonsaiWorldStateKeyValueStorage(
+      final BonsaiFlatDbStrategyProvider flatDbStrategyProvider,
+      final SegmentedKeyValueStorage composedWorldStateStorage,
+      final KeyValueStorage trieLogStorage,
+      final FlatDbCacheManager cacheManager,
+      final long cacheVersion,
+      final TrieNodeStrategy trieNodeStrategy,
+      final SegmentedKeyValueStorage trieLogAndPreimageStorage,
+      final PreimageWriteMetrics preimageWriteMetrics) {
+    this.preimageWriteMetrics = preimageWriteMetrics;
     this.composedWorldStateStorage = composedWorldStateStorage;
     this.trieLogStorage = trieLogStorage;
     this.trieLogAndPreimageStorage = trieLogAndPreimageStorage;
@@ -212,7 +238,8 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
         cacheManager,
         cacheVersion,
         strategy,
-        trieLogAndPreimageStorage);
+        trieLogAndPreimageStorage,
+        preimageWriteMetrics);
   }
 
   private static FlatDbCacheManager createCacheManager(
@@ -249,6 +276,10 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
    *
    * @return the preimage storage, or empty when preimages are not persisted
    */
+  public PreimageWriteMetrics getPreimageWriteMetrics() {
+    return preimageWriteMetrics;
+  }
+
   public Optional<WorldStatePreimageStorage> getPreimageStorage() {
     return Optional.ofNullable(preimageStorage);
   }

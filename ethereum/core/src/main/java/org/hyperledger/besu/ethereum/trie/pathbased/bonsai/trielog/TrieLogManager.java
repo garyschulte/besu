@@ -14,9 +14,14 @@
  */
 package org.hyperledger.besu.ethereum.trie.pathbased.bonsai.trielog;
 
+import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.datatypes.StorageSlotKey;
 import org.hyperledger.besu.ethereum.chain.Blockchain;
+import org.hyperledger.besu.ethereum.storage.keyvalue.KnownSlotPreimages;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.BonsaiWorldStateKeyValueStorage;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.PreimageWriteMetrics;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.PreimageWriteMetrics.Outcome;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.PathBasedWorldState;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.accumulator.PathBasedWorldStateUpdateAccumulator;
 import org.hyperledger.besu.plugin.ServiceManager;
@@ -28,13 +33,16 @@ import org.hyperledger.besu.plugin.services.trielogs.TrieLogFactory;
 import org.hyperledger.besu.plugin.services.trielogs.TrieLogProvider;
 import org.hyperledger.besu.util.Subscribers;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.units.bigints.UInt256;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,6 +135,14 @@ public class TrieLogManager {
             trieLogFactory.serialize(trieLog));
   }
 
+  /**
+   * Stage preimages for keys that enter state in this block. A preimage only has to be written the
+   * first time its key is created: updates to existing keys, and read-only touches, were already
+   * covered when the key was created, so they are skipped without any storage lookup. Slot keys
+   * that are common to many contracts are never written, see {@link KnownSlotPreimages}.
+   *
+   * <p>This assumes the preimage store has been populated since the key was first created.
+   */
   private void stagePreimages(
       final PathBasedWorldStateUpdateAccumulator<?> accumulator,
       final BonsaiWorldStateKeyValueStorage.Updater stateUpdater) {
@@ -134,21 +150,57 @@ public class TrieLogManager {
         .getPreimageUpdater()
         .ifPresent(
             preimages -> {
-              accumulator
-                  .getAccountsToUpdate()
-                  .keySet()
-                  .forEach(
-                      address ->
-                          preimages.putAccountTrieKeyPreimage(
-                              Bytes32.wrap(address.addressHash().getBytes()), address));
-              accumulator.getStorageToUpdate().values().stream()
-                  .flatMap(slots -> slots.keySet().stream())
-                  .filter(slot -> slot.getSlotKey().isPresent())
-                  .forEach(
-                      slot ->
-                          preimages.putStorageTrieKeyPreimage(
-                              Bytes32.wrap(slot.getSlotHash().getBytes()),
-                              slot.getSlotKey().get()));
+              final PreimageWriteMetrics metrics = rootWorldStateStorage.getPreimageWriteMetrics();
+
+              long accountsWritten = 0;
+              long accountsExisting = 0;
+              for (final var entry : accumulator.getAccountsToUpdate().entrySet()) {
+                final var change = entry.getValue();
+                if (change.getPrior() != null) {
+                  accountsExisting++;
+                } else if (change.getUpdated() != null) {
+                  final Address address = entry.getKey();
+                  preimages.putAccountTrieKeyPreimage(
+                      Bytes32.wrap(address.addressHash().getBytes()), address);
+                  accountsWritten++;
+                }
+              }
+
+              long slotsWritten = 0;
+              long slotsExisting = 0;
+              long slotsKnown = 0;
+              // the preimage store is keyed by slot hash only, so a slot key shared by many
+              // accounts in this block needs staging once
+              final Set<UInt256> stagedSlots = new HashSet<>();
+              for (final var accountSlots : accumulator.getStorageToUpdate().values()) {
+                for (final var entry : accountSlots.entrySet()) {
+                  final StorageSlotKey slot = entry.getKey();
+                  if (slot.getSlotKey().isEmpty()) {
+                    continue;
+                  }
+                  final UInt256 prior = entry.getValue().getPrior();
+                  final UInt256 updated = entry.getValue().getUpdated();
+                  if (prior != null && !prior.isZero()) {
+                    slotsExisting++;
+                  } else if (updated != null && !updated.isZero()) {
+                    // the key enters state in this block
+                    final UInt256 slotKey = slot.getSlotKey().get();
+                    if (KnownSlotPreimages.isKnown(slotKey)) {
+                      slotsKnown++;
+                    } else if (stagedSlots.add(slotKey)) {
+                      preimages.putStorageTrieKeyPreimage(
+                          Bytes32.wrap(slot.getSlotHash().getBytes()), slotKey);
+                      slotsWritten++;
+                    }
+                  }
+                }
+              }
+
+              metrics.record("account", Outcome.WRITTEN, accountsWritten);
+              metrics.record("account", Outcome.SKIPPED_EXISTING, accountsExisting);
+              metrics.record("slot", Outcome.WRITTEN, slotsWritten);
+              metrics.record("slot", Outcome.SKIPPED_EXISTING, slotsExisting);
+              metrics.record("slot", Outcome.SKIPPED_KNOWN, slotsKnown);
             });
   }
 

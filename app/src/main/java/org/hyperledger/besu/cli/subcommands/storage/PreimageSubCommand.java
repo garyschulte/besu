@@ -19,9 +19,11 @@ import org.hyperledger.besu.controller.BesuController;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.storage.StorageProvider;
 import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIdentifier;
+import org.hyperledger.besu.ethereum.storage.keyvalue.KnownSlotPreimages;
 import org.hyperledger.besu.ethereum.worldstate.DataStorageConfiguration;
 import org.hyperledger.besu.ethereum.worldstate.ImmutableDataStorageConfiguration;
 import org.hyperledger.besu.ethereum.worldstate.ImmutableExtraStorageConfiguration;
+import org.hyperledger.besu.plugin.services.storage.KeyValueStorage;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -31,8 +33,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.tuweni.bytes.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,6 +94,16 @@ public class PreimageSubCommand implements Runnable {
             .toString());
   }
 
+  /**
+   * Stored preimages followed by the well known slot preimages, which are resolved from memory and
+   * never written to the store.
+   */
+  private static Stream<byte[]> allPreimageValues(final KeyValueStorage preimageStorage) {
+    return Stream.concat(
+        preimageStorage.stream().map(Pair::getValue),
+        KnownSlotPreimages.all().map(slot -> slot.toArrayUnsafe()));
+  }
+
   @CommandLine.Command(
       name = "export",
       description = "This command exports the preimages from persistent storage to a flat file",
@@ -135,10 +149,9 @@ public class PreimageSubCommand implements Runnable {
         if (hex) {
           // HEX MODE: Write each preimage as a hex string line
           try (var writer = Files.newBufferedWriter(preimagesPath, StandardCharsets.UTF_8)) {
-            preimageStorage.stream()
+            allPreimageValues(preimageStorage)
                 .forEach(
-                    pair -> {
-                      byte[] value = pair.getValue();
+                    value -> {
                       String hexString = Bytes.wrap(value).toHexString();
                       try {
                         writer.write(hexString);
@@ -151,10 +164,9 @@ public class PreimageSubCommand implements Runnable {
         } else {
           // BINARY MODE: Write [1-byte length][N-byte value]
           try (var out = Files.newOutputStream(preimagesPath)) {
-            preimageStorage.stream()
+            allPreimageValues(preimageStorage)
                 .forEach(
-                    pair -> {
-                      byte[] value = pair.getValue();
+                    value -> {
                       int length = value.length;
                       if (length != 20 && length != 32) {
                         throw new IllegalArgumentException(

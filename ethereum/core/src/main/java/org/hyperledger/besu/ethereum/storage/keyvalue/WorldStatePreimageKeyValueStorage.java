@@ -53,7 +53,9 @@ public class WorldStatePreimageKeyValueStorage implements WorldStatePreimageStor
    * @return the raw preimage, or empty if not found
    */
   public Optional<Bytes> getRawPreimage(final Bytes32 trieKey) {
-    return keyValueStorage.get(trieKey.toArrayUnsafe()).map(Bytes::wrap);
+    return KnownSlotPreimages.lookup(trieKey)
+        .<Bytes>map(slot -> slot)
+        .or(() -> keyValueStorage.get(trieKey.toArrayUnsafe()).map(Bytes::wrap));
   }
 
   @Override

@@ -31,7 +31,8 @@ class BonsaiPreimageTrieLogAtomicityTest {
 
   private static final Address ADDRESS = Address.fromHexString("0xdeadbeef");
   private static final Bytes32 ADDRESS_HASH = Bytes32.wrap(ADDRESS.addressHash().getBytes());
-  private static final UInt256 SLOT = UInt256.valueOf(42);
+  // beyond the known slot table, so it is really persisted
+  private static final UInt256 SLOT = UInt256.valueOf(1_000_000);
   private static final Bytes32 SLOT_HASH = Bytes32.wrap(Hash.hash(SLOT).getBytes());
   private static final byte[] TRIE_LOG_KEY = Hash.hash(Bytes32.ZERO).getBytes().toArrayUnsafe();
 
