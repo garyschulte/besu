@@ -56,7 +56,8 @@ public enum KeyValueSegmentIdentifier implements SegmentIdentifier {
   BACKWARD_SYNC_CHAIN(new byte[] {15}),
   SNAPSYNC_MISSING_ACCOUNT_RANGE(new byte[] {16}),
   SNAPSYNC_ACCOUNT_TO_FIX(new byte[] {17}),
-  CHAIN_PRUNER_STATE(new byte[] {18});
+  CHAIN_PRUNER_STATE(new byte[] {18}),
+  HASH_PREIMAGE_STORE(new byte[] {19}, EnumSet.of(BONSAI, X_BONSAI_ARCHIVE), true, false, false);
 
   private final byte[] id;
   private final EnumSet<DataStorageFormat> formats;

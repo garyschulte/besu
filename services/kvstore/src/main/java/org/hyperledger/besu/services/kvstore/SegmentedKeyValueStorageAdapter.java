@@ -150,7 +150,20 @@ public class SegmentedKeyValueStorageAdapter implements KeyValueStorage {
      */
     public KeyValueStorageTransactionAdapter(
         final SegmentIdentifier segmentIdentifier, final SegmentedKeyValueStorage storage) {
-      this.segmentedTransaction = storage.startTransaction();
+      this(segmentIdentifier, storage.startTransaction());
+    }
+
+    /**
+     * Instantiates a new Key value storage transaction adapter over an existing segmented
+     * transaction. Adapters sharing one segmented transaction commit, roll back and close together.
+     *
+     * @param segmentIdentifier the segmentIdentifier to use for the wrapped transaction
+     * @param segmentedTransaction the existing segmented transaction to adapt
+     */
+    public KeyValueStorageTransactionAdapter(
+        final SegmentIdentifier segmentIdentifier,
+        final SegmentedKeyValueStorageTransaction segmentedTransaction) {
+      this.segmentedTransaction = segmentedTransaction;
       this.segmentIdentifier = segmentIdentifier;
     }
 

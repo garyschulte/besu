@@ -353,7 +353,7 @@ public abstract class PathBasedWorldState
 
   @Override
   public Stream<StreamableAccount> streamAccounts(final Bytes32 startKeyHash, final int limit) {
-    throw new RuntimeException("storage format do not provide account streaming.");
+    return worldStateKeyValueStorage.streamAccounts(this, startKeyHash, limit);
   }
 
   @Override

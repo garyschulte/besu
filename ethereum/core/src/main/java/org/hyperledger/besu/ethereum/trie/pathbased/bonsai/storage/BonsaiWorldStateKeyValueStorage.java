@@ -19,12 +19,16 @@ import static org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIden
 import static org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIdentifier.CODE_STORAGE;
 import static org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIdentifier.TRIE_BRANCH_STORAGE;
 
+import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.StorageSlotKey;
 import org.hyperledger.besu.ethereum.storage.StorageProvider;
 import org.hyperledger.besu.ethereum.storage.keyvalue.KeyValueSegmentIdentifier;
+import org.hyperledger.besu.ethereum.storage.keyvalue.WorldStatePreimageKeyValueStorage;
 import org.hyperledger.besu.ethereum.trie.MerkleTrie;
 import org.hyperledger.besu.ethereum.trie.common.PmtStateTrieAccountValue;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.account.BonsaiAccount;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.code.BonsaiCodeCache;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.cache.FlatDbCacheManager;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.cache.VersionedFlatDbCacheManager;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.flat.BonsaiFlatDbStrategy;
@@ -32,9 +36,11 @@ import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.flat.BonsaiFl
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.flat.FlatDbStrategy;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.trienode.BonsaiTrieNodeStrategy;
 import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.storage.trienode.TrieNodeStrategy;
+import org.hyperledger.besu.ethereum.trie.pathbased.bonsai.worldview.BonsaiWorldView;
 import org.hyperledger.besu.ethereum.worldstate.DataStorageConfiguration;
 import org.hyperledger.besu.ethereum.worldstate.FlatDbMode;
 import org.hyperledger.besu.evm.account.AccountStorageEntry;
+import org.hyperledger.besu.evm.worldstate.WorldState;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.storage.DataStorageFormat;
 import org.hyperledger.besu.plugin.services.storage.KeyValueStorage;
@@ -43,23 +49,30 @@ import org.hyperledger.besu.plugin.services.storage.SegmentIdentifier;
 import org.hyperledger.besu.plugin.services.storage.SegmentedKeyValueStorage;
 import org.hyperledger.besu.plugin.services.storage.SegmentedKeyValueStorageTransaction;
 import org.hyperledger.besu.plugin.services.storage.WorldStateKeyValueStorage;
+import org.hyperledger.besu.plugin.services.storage.WorldStatePreimageStorage;
+import org.hyperledger.besu.services.kvstore.SegmentedKeyValueStorageAdapter;
 import org.hyperledger.besu.util.Subscribers;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import kotlin.Pair;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
+import org.apache.tuweni.rlp.RLP;
+import org.apache.tuweni.units.bigints.UInt256;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,11 +88,21 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
   public static final byte[] WORLD_BLOCK_NUMBER_KEY =
       "worldBlockNumber".getBytes(StandardCharsets.UTF_8);
 
+  private static final BonsaiCodeCache NO_OP_CODE_CACHE = new BonsaiCodeCache();
+
   private final AtomicBoolean shouldClose = new AtomicBoolean(false);
   protected final AtomicBoolean isClosed = new AtomicBoolean(false);
   protected final Subscribers<StorageSubscriber> subscribers = Subscribers.create();
   protected final SegmentedKeyValueStorage composedWorldStateStorage;
   protected final KeyValueStorage trieLogStorage;
+
+  /**
+   * Segmented storage spanning the trie log and hash preimage segments, so that both can be staged
+   * and committed in a single transaction. Null when preimage storage is not enabled.
+   */
+  protected final SegmentedKeyValueStorage trieLogAndPreimageStorage;
+
+  private final WorldStatePreimageStorage preimageStorage;
 
   protected final BonsaiFlatDbStrategyProvider flatDbStrategyProvider;
   protected final FlatDbCacheManager cacheManager;
@@ -106,8 +129,21 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
         provider.getStorageBySegmentIdentifiers(
             List.of(
                 ACCOUNT_INFO_STATE, CODE_STORAGE, ACCOUNT_STORAGE_STORAGE, TRIE_BRANCH_STORAGE));
-    this.trieLogStorage =
-        provider.getStorageBySegmentIdentifier(KeyValueSegmentIdentifier.TRIE_LOG_STORAGE);
+    if (dataStorageConfiguration.getHashPreImageStorageEnabled()) {
+      this.trieLogAndPreimageStorage =
+          provider.getStorageBySegmentIdentifiers(
+              List.of(
+                  KeyValueSegmentIdentifier.TRIE_LOG_STORAGE,
+                  KeyValueSegmentIdentifier.HASH_PREIMAGE_STORE));
+      this.trieLogStorage =
+          new SegmentedKeyValueStorageAdapter(
+              KeyValueSegmentIdentifier.TRIE_LOG_STORAGE, trieLogAndPreimageStorage);
+    } else {
+      this.trieLogAndPreimageStorage = null;
+      this.trieLogStorage =
+          provider.getStorageBySegmentIdentifier(KeyValueSegmentIdentifier.TRIE_LOG_STORAGE);
+    }
+    this.preimageStorage = createPreimageStorage(trieLogAndPreimageStorage);
     this.flatDbStrategyProvider =
         new BonsaiFlatDbStrategyProvider(metricsSystem, dataStorageConfiguration);
     flatDbStrategyProvider.loadFlatDbStrategy(composedWorldStateStorage);
@@ -129,7 +165,8 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
         trieLogStorage,
         cacheManager,
         cacheVersion,
-        new BonsaiTrieNodeStrategy());
+        new BonsaiTrieNodeStrategy(),
+        null);
   }
 
   public BonsaiWorldStateKeyValueStorage(
@@ -139,8 +176,28 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
       final FlatDbCacheManager cacheManager,
       final long cacheVersion,
       final TrieNodeStrategy trieNodeStrategy) {
+    this(
+        flatDbStrategyProvider,
+        composedWorldStateStorage,
+        trieLogStorage,
+        cacheManager,
+        cacheVersion,
+        trieNodeStrategy,
+        null);
+  }
+
+  public BonsaiWorldStateKeyValueStorage(
+      final BonsaiFlatDbStrategyProvider flatDbStrategyProvider,
+      final SegmentedKeyValueStorage composedWorldStateStorage,
+      final KeyValueStorage trieLogStorage,
+      final FlatDbCacheManager cacheManager,
+      final long cacheVersion,
+      final TrieNodeStrategy trieNodeStrategy,
+      final SegmentedKeyValueStorage trieLogAndPreimageStorage) {
     this.composedWorldStateStorage = composedWorldStateStorage;
     this.trieLogStorage = trieLogStorage;
+    this.trieLogAndPreimageStorage = trieLogAndPreimageStorage;
+    this.preimageStorage = createPreimageStorage(trieLogAndPreimageStorage);
     this.flatDbStrategyProvider = flatDbStrategyProvider;
     this.cacheManager = cacheManager;
     this.cacheVersion = cacheVersion;
@@ -154,7 +211,8 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
         trieLogStorage,
         cacheManager,
         cacheVersion,
-        strategy);
+        strategy,
+        trieLogAndPreimageStorage);
   }
 
   private static FlatDbCacheManager createCacheManager(
@@ -185,6 +243,48 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
   public KeyValueStorage getTrieLogStorage() {
     return trieLogStorage;
   }
+
+  /**
+   * The persistent hash preimage storage, present only when hash preimage storage is enabled.
+   *
+   * @return the preimage storage, or empty when preimages are not persisted
+   */
+  public Optional<WorldStatePreimageStorage> getPreimageStorage() {
+    return Optional.ofNullable(preimageStorage);
+  }
+
+  private static WorldStatePreimageStorage createPreimageStorage(
+      final SegmentedKeyValueStorage trieLogAndPreimageStorage) {
+    return trieLogAndPreimageStorage == null
+        ? null
+        : new WorldStatePreimageKeyValueStorage(
+            new SegmentedKeyValueStorageAdapter(
+                KeyValueSegmentIdentifier.HASH_PREIMAGE_STORE, trieLogAndPreimageStorage));
+  }
+
+  /**
+   * Start the trie log transaction. When preimage storage is enabled the returned transaction also
+   * carries the preimage writes, so trie log and preimages commit atomically.
+   *
+   * @return the trie log transaction and, if enabled, the preimage updater sharing it
+   */
+  protected TrieLogTransactions startTrieLogTransactions() {
+    if (trieLogAndPreimageStorage == null) {
+      return new TrieLogTransactions(trieLogStorage.startTransaction(), null);
+    }
+    final SegmentedKeyValueStorageTransaction shared = trieLogAndPreimageStorage.startTransaction();
+    return new TrieLogTransactions(
+        new SegmentedKeyValueStorageAdapter.KeyValueStorageTransactionAdapter(
+            KeyValueSegmentIdentifier.TRIE_LOG_STORAGE, shared),
+        // never committed on its own: the trie log transaction owns the shared lifecycle
+        new WorldStatePreimageKeyValueStorage.Updater(
+            new SegmentedKeyValueStorageAdapter.KeyValueStorageTransactionAdapter(
+                KeyValueSegmentIdentifier.HASH_PREIMAGE_STORE, shared)));
+  }
+
+  /** The trie log transaction, and the preimage updater sharing it when preimages are enabled. */
+  protected record TrieLogTransactions(
+      KeyValueStorageTransaction trieLog, WorldStatePreimageStorage.Updater preimages) {}
 
   public Optional<byte[]> getTrieLog(final Hash blockHash) {
     return trieLogStorage.get(blockHash.getBytes().toArrayUnsafe());
@@ -419,7 +519,59 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
 
   public NavigableMap<Bytes32, AccountStorageEntry> storageEntriesFrom(
       final Hash addressHash, final Bytes32 startKeyHash, final int limit) {
-    throw new RuntimeException("Bonsai Tries does not currently support enumerating storage");
+    if (preimageStorage == null) {
+      throw new RuntimeException(
+          "Bonsai Tries does not currently support enumerating storage without hash preimage storage");
+    }
+    return streamFlatStorages(addressHash, startKeyHash, UInt256.MAX_VALUE, limit)
+        .entrySet()
+        // map back to slot keys using the preimage store:
+        .stream()
+        .collect(
+            Collectors.toMap(
+                Map.Entry::getKey,
+                e ->
+                    AccountStorageEntry.create(
+                        UInt256.fromBytes(RLP.decodeValue(e.getValue())),
+                        e.getKey(),
+                        preimageStorage.getStorageTrieKeyPreimage(e.getKey())),
+                (a, b) -> a,
+                TreeMap::new));
+  }
+
+  /**
+   * Stream accounts from flat storage, resolving addresses via the preimage store. Accounts whose
+   * preimage is unknown are skipped.
+   *
+   * @param context the world view used to resolve account state
+   * @param startKeyHash the account hash to start from
+   * @param limit the maximum number of flat accounts to consider
+   * @return accounts in address order
+   */
+  public Stream<WorldState.StreamableAccount> streamAccounts(
+      final BonsaiWorldView context, final Bytes32 startKeyHash, final int limit) {
+    if (preimageStorage == null) {
+      throw new RuntimeException("storage format do not provide account streaming.");
+    }
+    return streamFlatAccounts(startKeyHash, UInt256.MAX_VALUE, limit)
+        .entrySet()
+        // map back to addresses using the preimage store:
+        .stream()
+        .map(
+            entry ->
+                preimageStorage
+                    .getAccountTrieKeyPreimage(entry.getKey())
+                    .map(
+                        address ->
+                            new WorldState.StreamableAccount(
+                                Optional.of(address),
+                                BonsaiAccount.fromRLP(
+                                    context, address, entry.getValue(), false, NO_OP_CODE_CACHE))))
+        .filter(Optional::isPresent)
+        .map(Optional::get)
+        .filter(acct -> context.updater().getAccount(acct.getAddress().orElse(null)) != null)
+        .sorted(
+            Comparator.comparing(account -> account.getAddress().orElse(Address.ZERO).getBytes()));
   }
 
   public void upgradeToFullFlatDbMode() {
@@ -472,9 +624,11 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
 
   @Override
   public Updater updater() {
+    final TrieLogTransactions trieLogTransactions = startTrieLogTransactions();
     return new CachedUpdater(
         composedWorldStateStorage.startTransaction(),
-        trieLogStorage.startTransaction(),
+        trieLogTransactions.trieLog(),
+        trieLogTransactions.preimages(),
         getFlatDbStrategy(),
         composedWorldStateStorage,
         trieNodeStrategy);
@@ -518,6 +672,7 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
 
     protected final SegmentedKeyValueStorageTransaction composedWorldStateTransaction;
     protected final KeyValueStorageTransaction trieLogStorageTransaction;
+    protected final WorldStatePreimageStorage.Updater preimageUpdater;
     protected final FlatDbStrategy flatDbStrategy;
     protected final SegmentedKeyValueStorage worldStorage;
     protected final TrieNodeStrategy trieNodeStrategy;
@@ -528,9 +683,26 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
         final FlatDbStrategy flatDbStrategy,
         final SegmentedKeyValueStorage worldStorage,
         final TrieNodeStrategy trieNodeStrategy) {
+      this(
+          composedWorldStateTransaction,
+          trieLogStorageTransaction,
+          null,
+          flatDbStrategy,
+          worldStorage,
+          trieNodeStrategy);
+    }
+
+    public Updater(
+        final SegmentedKeyValueStorageTransaction composedWorldStateTransaction,
+        final KeyValueStorageTransaction trieLogStorageTransaction,
+        final WorldStatePreimageStorage.Updater preimageUpdater,
+        final FlatDbStrategy flatDbStrategy,
+        final SegmentedKeyValueStorage worldStorage,
+        final TrieNodeStrategy trieNodeStrategy) {
 
       this.composedWorldStateTransaction = composedWorldStateTransaction;
       this.trieLogStorageTransaction = trieLogStorageTransaction;
+      this.preimageUpdater = preimageUpdater;
       this.flatDbStrategy = flatDbStrategy;
       this.worldStorage = worldStorage;
       this.trieNodeStrategy = trieNodeStrategy;
@@ -627,6 +799,17 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
       return trieLogStorageTransaction;
     }
 
+    /**
+     * The preimage updater, present only when hash preimage storage is enabled. Preimages staged
+     * here are committed atomically with the trie log by {@link #commitTrieLogOnly()}; the returned
+     * updater must not be committed directly.
+     *
+     * @return the preimage updater sharing the trie log transaction, if enabled
+     */
+    public Optional<WorldStatePreimageStorage.Updater> getPreimageUpdater() {
+      return Optional.ofNullable(preimageUpdater);
+    }
+
     @Override
     public void commit() {
       // onBeforeCommit can throw; rollback to avoid leaking open transactions
@@ -680,12 +863,14 @@ public class BonsaiWorldStateKeyValueStorage implements WorldStateKeyValueStorag
     public CachedUpdater(
         final SegmentedKeyValueStorageTransaction composedWorldStateTransaction,
         final KeyValueStorageTransaction trieLogStorageTransaction,
+        final WorldStatePreimageStorage.Updater preimageUpdater,
         final FlatDbStrategy flatDbStrategy,
         final SegmentedKeyValueStorage worldStorage,
         final TrieNodeStrategy trieNodeStrategy) {
       super(
           composedWorldStateTransaction,
           trieLogStorageTransaction,
+          preimageUpdater,
           flatDbStrategy,
           worldStorage,
           trieNodeStrategy);

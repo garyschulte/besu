@@ -65,6 +65,7 @@ public class BonsaiReferenceTestWorldStateStorage extends BonsaiWorldStateLayerS
                 TreeMap::new));
   }
 
+  @Override
   public Stream<WorldState.StreamableAccount> streamAccounts(
       final BonsaiWorldView context, final Bytes32 startKeyHash, final int limit) {
     return streamFlatAccounts(startKeyHash, UInt256.MAX_VALUE, limit)

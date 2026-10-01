@@ -14,6 +14,7 @@
  */
 package org.hyperledger.besu.cli.options.storage;
 
+import static org.hyperledger.besu.ethereum.worldstate.DataStorageConfiguration.DEFAULT_HASH_PREIMAGE_STORAGE_ENABLED;
 import static org.hyperledger.besu.ethereum.worldstate.DataStorageConfiguration.DEFAULT_RECEIPT_COMPACTION_ENABLED;
 import static org.hyperledger.besu.ethereum.worldstate.DataStorageConfiguration.DEFAULT_REVERT_REASON_ENABLED;
 
@@ -36,6 +37,9 @@ public class DataStorageOptions implements CLIOptions<DataStorageConfiguration> 
 
   private static final String DATA_STORAGE_FORMAT = "--data-storage-format";
 
+  /** Feature to store hash preimages as part of worldstate */
+  public static final String HASH_STORE_PREIMAGE_ENABLED = "--hash-preimage-storage-enabled";
+
   // Use Bonsai DB
   @Option(
       names = {DATA_STORAGE_FORMAT},
@@ -54,6 +58,12 @@ public class DataStorageOptions implements CLIOptions<DataStorageConfiguration> 
       description =
           "Enable passing the revert reason back through TransactionReceipts (default: ${DEFAULT-VALUE})")
   private Boolean revertReasonEnabled = DEFAULT_REVERT_REASON_ENABLED;
+
+  @Option(
+      names = {HASH_STORE_PREIMAGE_ENABLED},
+      description = "Whether to enable preimage storage. (default: ${DEFAULT-VALUE}).",
+      arity = "1")
+  private Boolean hashStorePreimagesEnabled = DEFAULT_HASH_PREIMAGE_STORAGE_ENABLED;
 
   @CommandLine.Option(
       names = {"--history-expiry-prune"},
@@ -102,6 +112,7 @@ public class DataStorageOptions implements CLIOptions<DataStorageConfiguration> 
     dataStorageOptions.extraStorageOptions =
         ExtraStorageOptions.fromConfig(domainObject.getExtraStorageConfiguration());
     dataStorageOptions.historyExpiryPrune = domainObject.getHistoryExpiryPruneEnabled();
+    dataStorageOptions.hashStorePreimagesEnabled = domainObject.getHashPreImageStorageEnabled();
     return dataStorageOptions;
   }
 
@@ -113,6 +124,7 @@ public class DataStorageOptions implements CLIOptions<DataStorageConfiguration> 
             .receiptCompactionEnabled(receiptCompactionEnabled)
             .revertReasonEnabled(revertReasonEnabled)
             .historyExpiryPruneEnabled(historyExpiryPrune)
+            .hashPreImageStorageEnabled(hashStorePreimagesEnabled)
             .extraStorageConfiguration(extraStorageOptions.toDomainObject());
     return builder.build();
   }

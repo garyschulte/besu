@@ -49,7 +49,8 @@ public class BonsaiSnapshotWorldStateKeyValueStorage extends BonsaiWorldStateKey
         trieLogStorage,
         parentWorldStateStorage.getCacheManager(),
         parentWorldStateStorage.getCurrentVersion(),
-        parentWorldStateStorage.getTrieNodeStrategy());
+        parentWorldStateStorage.getTrieNodeStrategy(),
+        parentWorldStateStorage.trieLogAndPreimageStorage);
 
     this.parentWorldStateStorage = parentWorldStateStorage;
     this.subscribeParentId = parentWorldStateStorage.subscribe(this);
@@ -74,9 +75,11 @@ public class BonsaiSnapshotWorldStateKeyValueStorage extends BonsaiWorldStateKey
 
   @Override
   public Updater updater() {
+    final TrieLogTransactions trieLogTransactions = startTrieLogTransactions();
     return new Updater(
         ((SnappedKeyValueStorage) composedWorldStateStorage).getSnapshotTransaction(),
-        trieLogStorage.startTransaction(),
+        trieLogTransactions.trieLog(),
+        trieLogTransactions.preimages(),
         getFlatDbStrategy(),
         composedWorldStateStorage,
         trieNodeStrategy);

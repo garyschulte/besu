@@ -58,4 +58,14 @@ public interface DataStorageConfiguration {
   default boolean getRevertReasonEnabled() {
     return false;
   }
+
+  /**
+   * Whether account and storage slot hash preimages are persisted to storage.
+   *
+   * @return Whether hash preimage persistence is enabled
+   */
+  @Unstable
+  default boolean getHashPreImageStorageEnabled() {
+    return false;
+  }
 }

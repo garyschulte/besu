@@ -34,6 +34,7 @@ import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.bytes.Bytes32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,6 +75,10 @@ public class TrieLogManager {
       try {
         final TrieLog trieLog = prepareTrieLog(forBlockHeader, localUpdater);
         persistTrieLog(forBlockHeader, forWorldStateRootHash, trieLog, stateUpdater);
+        // preimages ride in the trie log transaction so both commit (or neither does) together.
+        // Slot keys are only known to the accumulator that executed the block, so this has to
+        // happen here, when the trie log is first written, and not on the later head roll-forward.
+        stagePreimages(localUpdater, stateUpdater);
 
         // notify trie log added observers, synchronously
         trieLogObservers.forEach(o -> o.onTrieLogAdded(new TrieLogAddedEvent(trieLog)));
@@ -120,6 +125,31 @@ public class TrieLogManager {
         .put(
             blockHeader.getBlockHash().getBytes().toArrayUnsafe(),
             trieLogFactory.serialize(trieLog));
+  }
+
+  private void stagePreimages(
+      final PathBasedWorldStateUpdateAccumulator<?> accumulator,
+      final BonsaiWorldStateKeyValueStorage.Updater stateUpdater) {
+    stateUpdater
+        .getPreimageUpdater()
+        .ifPresent(
+            preimages -> {
+              accumulator
+                  .getAccountsToUpdate()
+                  .keySet()
+                  .forEach(
+                      address ->
+                          preimages.putAccountTrieKeyPreimage(
+                              Bytes32.wrap(address.addressHash().getBytes()), address));
+              accumulator.getStorageToUpdate().values().stream()
+                  .flatMap(slots -> slots.keySet().stream())
+                  .filter(slot -> slot.getSlotKey().isPresent())
+                  .forEach(
+                      slot ->
+                          preimages.putStorageTrieKeyPreimage(
+                              Bytes32.wrap(slot.getSlotHash().getBytes()),
+                              slot.getSlotKey().get()));
+            });
   }
 
   public long getMaxLayersToLoad() {

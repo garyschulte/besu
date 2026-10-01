@@ -162,5 +162,10 @@ public class BesuConfigurationImpl
     public boolean getRevertReasonEnabled() {
       return dataStorageConfiguration.getRevertReasonEnabled();
     }
+
+    @Override
+    public boolean getHashPreImageStorageEnabled() {
+      return dataStorageConfiguration.getHashPreImageStorageEnabled();
+    }
   }
 }
